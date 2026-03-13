@@ -346,9 +346,11 @@ impl Device {
                     // If this is a reset-ack (command byte 1, opt1=0) we're done
                     if b.len() >= CMD_MSG_LEN
                         && let Some(msg) = CmdMsg::from_bytes(&b)
-                            && msg.command == CMD_RESET && msg.opt1 == 0 {
-                                break;
-                            }
+                        && msg.command == CMD_RESET
+                        && msg.opt1 == 0
+                    {
+                        break;
+                    }
                 }
             }
         }
