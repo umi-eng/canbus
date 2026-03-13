@@ -1,0 +1,13 @@
+[package]
+name = "korlan"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nusb = { version = "0.2.3", features = ["tokio"] }
+thiserror = "2.0"
+tokio = { version = "1", features = ["sync", "rt", "rt-multi-thread"] }
+zerocopy = { version = "0.8.42", features = ["derive"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
