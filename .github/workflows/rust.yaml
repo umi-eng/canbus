@@ -29,7 +29,7 @@ jobs:
       - name: Report Clippy version
         run: cargo clippy -- --version
       - name: Run Clippy Lints
-        run: cargo clippy --workspace --all-features --locked -- -D warnings
+        run: cargo clippy --workspace --all-features -- -D warnings
 
   check-docs:
     runs-on: ubuntu-latest
