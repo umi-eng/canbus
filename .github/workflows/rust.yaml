@@ -1,0 +1,43 @@
+name: Rust
+
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+jobs:
+  check-style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Report cargo version
+        run: cargo --version
+      - name: Report rustfmt version
+        run: cargo fmt -- --version
+      - name: Check style
+        run: cargo fmt -- --check
+
+  check-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
+        if: ${{ github.ref != 'refs/heads/main' }}
+      - name: Report cargo version
+        run: cargo --version
+      - name: Report Clippy version
+        run: cargo clippy -- --version
+      - name: Run Clippy Lints
+        run: cargo clippy --workspace --all-features --locked -- -D warnings
+
+  check-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
+        if: ${{ github.ref != 'refs/heads/main' }}
+      - name: Report cargo version
+        run: cargo --version
+      - name: Build documentation
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
