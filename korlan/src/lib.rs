@@ -339,15 +339,35 @@ impl Device {
         device.set_configuration(1).await.map_err(Error::Usb)?;
         let iface: Interface = device.claim_interface(0).await.map_err(Error::Usb)?;
 
+        let mut cmd_tx = iface.endpoint::<Bulk, Out>(EP_CMD_TX).map_err(Error::Usb)?;
+        let mut cmd_rx = iface.endpoint::<Bulk, In>(EP_CMD_RX).map_err(Error::Usb)?;
+        let mut data_tx = iface
+            .endpoint::<Bulk, Out>(EP_DATA_TX)
+            .map_err(Error::Usb)?;
+        let mut data_rx = iface.endpoint::<Bulk, In>(EP_DATA_RX).map_err(Error::Usb)?;
+
+        // A previous session may have exited with an in-flight transfer on one
+        // of these pipes. On macOS, AbortPipe (called by transfer_blocking on
+        // timeout or by cancel_all on drop) leaves the IOKit pipe in a halted
+        // state. Any new transfer submitted to a halted pipe immediately
+        // completes with kIOReturnAborted → TransferError::Cancelled, which is
+        // indistinguishable from a real cancellation. Clear all four pipes
+        // unconditionally here so we always start from a known-good state.
+        tokio::task::block_in_place(|| {
+            // Errors are intentionally ignored: on a clean pipe (no prior
+            // aborted session) ClearPipeStallBothEnds returns an error, so
+            // failure here is the normal case and not actionable.
+            let _ = cmd_tx.clear_halt().wait();
+            let _ = cmd_rx.clear_halt().wait();
+            let _ = data_tx.clear_halt().wait();
+            let _ = data_rx.clear_halt().wait();
+        });
+
         let this = Self {
-            cmd_tx: Mutex::new(iface.endpoint::<Bulk, Out>(EP_CMD_TX).map_err(Error::Usb)?),
-            cmd_rx: Mutex::new(iface.endpoint::<Bulk, In>(EP_CMD_RX).map_err(Error::Usb)?),
-            data_tx: Mutex::new(
-                iface
-                    .endpoint::<Bulk, Out>(EP_DATA_TX)
-                    .map_err(Error::Usb)?,
-            ),
-            data_rx: Mutex::new(iface.endpoint::<Bulk, In>(EP_DATA_RX).map_err(Error::Usb)?),
+            cmd_tx: Mutex::new(cmd_tx),
+            cmd_rx: Mutex::new(cmd_rx),
+            data_tx: Mutex::new(data_tx),
+            data_rx: Mutex::new(data_rx),
             rx_buf: Mutex::new(Vec::new()),
         };
 
@@ -381,43 +401,22 @@ impl Device {
         Ok(resp)
     }
 
-    /// Drain any stale command responses left in the RX pipe from a previous
-    /// session. We attempt up to 8 reads with a short timeout and stop as
-    /// soon as one times out (nothing left) or we see a reset-ack.
-    async fn drain_cmd_rx(&self) {
-        let mut ep = self.cmd_rx.lock().await;
-        for _ in 0..8 {
-            let buf = Buffer::new(64);
-            let c = tokio::task::block_in_place(|| {
-                ep.transfer_blocking(buf, Duration::from_millis(50))
-            });
-            match c.into_result() {
-                Err(_) => break, // timeout or error -> pipe is empty
-                Ok(b) => {
-                    // If this is a reset-ack (command byte 1, opt1=0) we're done
-                    if b.len() >= CMD_MSG_LEN
-                        && let Some(msg) = CmdMsg::from_bytes(&b)
-                        && msg.command == CMD_RESET
-                        && msg.opt1 == 0
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    /// Send a device reset command and drain any stale responses first.
+    /// Send a device reset command and wait for the acknowledgement.
     pub async fn reset(&self) -> Result<(), Error> {
-        // Send reset, then drain the pipe: any queued responses (from a prior
-        // session) plus the reset-ack itself will be consumed by drain_cmd_rx.
         let out_buf: Buffer = CmdMsg::new(CMD_RESET).to_bytes().to_vec().into();
         {
             let mut ep = self.cmd_tx.lock().await;
             let c = tokio::task::block_in_place(|| ep.transfer_blocking(out_buf, CMD_TIMEOUT));
             c.into_result().map_err(Error::Transfer)?;
         }
-        self.drain_cmd_rx().await;
+        // Read back the reset acknowledgement. The device responds with a
+        // single CmdMsg whose command field is CMD_RESET.
+        let in_buf = Buffer::new(64);
+        let completion = {
+            let mut ep = self.cmd_rx.lock().await;
+            tokio::task::block_in_place(|| ep.transfer_blocking(in_buf, CMD_TIMEOUT))
+        };
+        completion.into_result().map_err(Error::Transfer)?;
         Ok(())
     }
 
