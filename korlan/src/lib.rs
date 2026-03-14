@@ -129,16 +129,67 @@ const RX_MSG_LEN: usize = size_of::<RxMsg>();
 /// A CAN frame.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Frame {
-    /// CAN identifier (11-bit standard or 29-bit extended).
-    pub id: u32,
+    /// CAN identifier (standard 11-bit or extended 29-bit).
+    pub id: embedded_can::Id,
     /// Data bytes.
     pub data: [u8; 8],
     /// Data length code (0-8).
     pub dlc: u8,
-    /// Extended (29-bit) identifier flag.
-    pub ext: bool,
     /// Remote transmission request flag.
     pub rtr: bool,
+}
+
+impl embedded_can::Frame for Frame {
+    fn new(id: impl Into<embedded_can::Id>, data: &[u8]) -> Option<Self> {
+        if data.len() > 8 {
+            return None;
+        }
+        let dlc = data.len() as u8;
+        let mut buf = [0u8; 8];
+        buf[..data.len()].copy_from_slice(data);
+        Some(Self {
+            id: id.into(),
+            data: buf,
+            dlc,
+            rtr: false,
+        })
+    }
+
+    fn new_remote(id: impl Into<embedded_can::Id>, dlc: usize) -> Option<Self> {
+        if dlc > 8 {
+            return None;
+        }
+        Some(Self {
+            id: id.into(),
+            data: [0u8; 8],
+            dlc: dlc as u8,
+            rtr: true,
+        })
+    }
+
+    fn is_extended(&self) -> bool {
+        matches!(self.id, embedded_can::Id::Extended(_))
+    }
+
+    fn is_remote_frame(&self) -> bool {
+        self.rtr
+    }
+
+    fn id(&self) -> embedded_can::Id {
+        self.id
+    }
+
+    fn dlc(&self) -> usize {
+        self.dlc as usize
+    }
+
+    fn data(&self) -> &[u8] {
+        if self.rtr {
+            &[]
+        } else {
+            &self.data[..self.dlc as usize]
+        }
+    }
 }
 
 /// A bus error/status event decoded from a device error frame.
@@ -439,10 +490,14 @@ impl Device {
         if frame.rtr {
             msg.flags |= FLAG_RTR;
         }
-        if frame.ext {
-            msg.flags |= FLAG_EXTID;
-        }
-        msg.id = (frame.id & 0x1FFF_FFFF).to_be_bytes();
+        let raw_id = match frame.id {
+            embedded_can::Id::Standard(sid) => sid.as_raw() as u32,
+            embedded_can::Id::Extended(eid) => {
+                msg.flags |= FLAG_EXTID;
+                eid.as_raw()
+            }
+        };
+        msg.id = raw_id.to_be_bytes();
         msg.dlc = frame.dlc.min(8);
         msg.data = frame.data;
 
@@ -517,14 +572,24 @@ fn parse_rx_msg(buf: &[u8]) -> Option<CanMessage> {
     }
 
     if msg.msg_type == TYPE_CAN_FRAME {
-        let id = u32::from_be_bytes(msg.id);
+        let raw_id = u32::from_be_bytes(msg.id);
         let ext = (msg.flags & FLAG_EXTID) != 0;
         let rtr = (msg.flags & FLAG_RTR) != 0;
+        let id = if ext {
+            embedded_can::Id::Extended(
+                embedded_can::ExtendedId::new(raw_id & 0x1FFF_FFFF)
+                    .unwrap_or(embedded_can::ExtendedId::MAX),
+            )
+        } else {
+            embedded_can::Id::Standard(
+                embedded_can::StandardId::new((raw_id & 0x7FF) as u16)
+                    .unwrap_or(embedded_can::StandardId::MAX),
+            )
+        };
         return Some(CanMessage::Frame(Frame {
             id,
             data: msg.data,
             dlc: msg.dlc & 0xF,
-            ext,
             rtr,
         }));
     }
@@ -535,6 +600,7 @@ fn parse_rx_msg(buf: &[u8]) -> Option<CanMessage> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use embedded_can::Frame as _;
 
     #[test]
     fn msg_sizes() {
@@ -606,8 +672,11 @@ mod tests {
         let msg = parse_rx_msg(&b).unwrap();
         match msg {
             CanMessage::Frame(f) => {
-                assert_eq!(f.id, 0x123);
-                assert!(!f.ext);
+                assert_eq!(
+                    f.id,
+                    embedded_can::Id::Standard(embedded_can::StandardId::new(0x123).unwrap())
+                );
+                assert!(!f.is_extended());
                 assert!(!f.rtr);
                 assert_eq!(f.dlc, 4);
                 assert_eq!(&f.data[..4], &[0xDE, 0xAD, 0xBE, 0xEF]);
@@ -631,8 +700,11 @@ mod tests {
         let msg = parse_rx_msg(&b).unwrap();
         match msg {
             CanMessage::Frame(f) => {
-                assert_eq!(f.id, 0x1234_5678);
-                assert!(f.ext);
+                assert_eq!(
+                    f.id,
+                    embedded_can::Id::Extended(embedded_can::ExtendedId::new(0x1234_5678).unwrap())
+                );
+                assert!(f.is_extended());
                 assert_eq!(f.dlc, 8);
             }
             _ => panic!("expected Frame"),
@@ -753,6 +825,7 @@ mod tests {
 #[cfg(test)]
 mod integration {
     use super::*;
+    use embedded_can::Frame as _;
     use std::time::Duration;
 
     /// Serialise all hardware tests: the device can only be opened exclusively
@@ -821,10 +894,9 @@ mod integration {
         .expect("open_with failed");
 
         let sent = Frame {
-            id: 0x42,
+            id: embedded_can::Id::Standard(embedded_can::StandardId::new(0x42).unwrap()),
             data: [1, 2, 3, 4, 0, 0, 0, 0],
             dlc: 4,
-            ext: false,
             rtr: false,
         };
         dev.send(sent.clone()).await.expect("send failed");
@@ -864,10 +936,9 @@ mod integration {
         .expect("open_with failed");
 
         let sent = Frame {
-            id: 0x1234_5678,
+            id: embedded_can::Id::Extended(embedded_can::ExtendedId::new(0x1234_5678).unwrap()),
             data: [0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0x00, 0x01],
             dlc: 8,
-            ext: true,
             rtr: false,
         };
         dev.send(sent.clone()).await.expect("send failed");
@@ -881,7 +952,7 @@ mod integration {
             CanMessage::Frame(f) => {
                 assert_eq!(f.id, sent.id);
                 assert_eq!(f.data, sent.data);
-                assert!(f.ext);
+                assert!(f.is_extended());
             }
             CanMessage::Error(e) => panic!("got error: {e:?}"),
         }
