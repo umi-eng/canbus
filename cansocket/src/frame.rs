@@ -6,6 +6,14 @@ pub enum FrameCreateError {
     InvalidDataLength,
 }
 
+impl std::fmt::Display for FrameCreateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidDataLength => write!(f, "Invalid data length"),
+        }
+    }
+}
+
 /// CAN Bus frame.
 #[derive(Debug, Clone, Copy)]
 pub struct Frame(pub libc::can_frame);
