@@ -1,0 +1,4 @@
+{
+  "name": "canbus",
+  "image": "mcr.microsoft.com/vscode/devcontainers/rust:dev-1",
+}

@@ -1,0 +1,18 @@
+[package]
+name = "cansocket"
+description = "Linux SocketCAN driver"
+version = "0.1.0"
+edition = "2024"
+authors = ["Liam Kinne <liam@umi.engineering>"]
+readme = "README.md"
+repository = "https://github.com/umi-eng/canbus"
+license = "MPL-2.0"
+categories = ["os::linux-apis"]
+
+[dependencies]
+async-io = "2.6"
+embedded-can = "0.4"
+libc = "0.2"
+
+[dev-dependencies]
+tokio = { version = "1.50", features = ["full"] }
