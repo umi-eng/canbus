@@ -6,7 +6,7 @@ pub enum FrameCreateError {
     InvalidDataLength,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Frame(pub libc::can_frame);
 
 impl Frame {
