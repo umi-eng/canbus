@@ -58,6 +58,18 @@ impl AsFd for LibcSocket {
     }
 }
 
+/// CAN Bus interface socket.
+///
+/// This provides both a blocking and async interface to a SocketCAN device.
+///
+/// ```
+/// // Open a socket.
+/// let socket = Socket::new("can0")?;
+/// // Receive a frame.
+/// let frame = socket.recv().await?;
+/// ```
+///
+/// Protocol errors are represented with the error type [`Error::Can`].
 pub struct Socket {
     fd: Async<LibcSocket>,
 }
@@ -182,7 +194,9 @@ impl Socket {
         Ok(Frame(frame))
     }
 
-    /// Blocking receive frame.
+    /// Blocking receive.
+    ///
+    /// Busy-waits for a frame to arrive.
     pub fn recv_blocking(&self) -> Result<Frame, Error> {
         loop {
             let mut frame: MaybeUninit<libc::can_frame> = MaybeUninit::uninit();
