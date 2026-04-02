@@ -1,8 +1,8 @@
 use embedded_can::{ExtendedId, Id, StandardId};
 
+/// Frame creation error.
 #[derive(Debug)]
 pub enum FrameCreateError {
-    InvalidLength,
     InvalidDataLength,
 }
 
@@ -13,7 +13,7 @@ impl Frame {
     /// Create a new data frame.
     pub fn new(id: impl Into<Id>, data: &[u8]) -> Result<Self, FrameCreateError> {
         if data.len() > 8 {
-            return Err(FrameCreateError::InvalidLength);
+            return Err(FrameCreateError::InvalidDataLength);
         }
 
         let mut frame: libc::can_frame = unsafe { std::mem::zeroed() };
@@ -30,7 +30,7 @@ impl Frame {
     /// Create a new remote frame.
     pub fn new_remote(id: impl Into<Id>, len: u8) -> Result<Self, FrameCreateError> {
         if len > 8 {
-            return Err(FrameCreateError::InvalidLength);
+            return Err(FrameCreateError::InvalidDataLength);
         }
 
         let mut frame: libc::can_frame = unsafe { std::mem::zeroed() };
