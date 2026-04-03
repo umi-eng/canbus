@@ -15,4 +15,5 @@ embedded-can = "0.4"
 libc = "0.2"
 
 [dev-dependencies]
+smol = "2.0"
 tokio = { version = "1.50", features = ["full"] }
