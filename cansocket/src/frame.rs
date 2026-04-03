@@ -30,8 +30,7 @@ impl Frame {
             Id::Extended(id) => id.as_raw() | libc::CAN_EFF_FLAG,
             Id::Standard(id) => id.as_raw().into(),
         };
-        let data = data_from_slice(data)?;
-        frame.data = data;
+        frame.data = data_from_slice(data)?;
         frame.can_dlc = data.len() as u8;
         Ok(Self(frame))
     }
