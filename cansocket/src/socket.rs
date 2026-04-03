@@ -287,20 +287,20 @@ fn check_error_frame(frame: &libc::can_frame) -> Result<(), embedded_can::ErrorK
         libc::CAN_ERR_TX_TIMEOUT => embedded_can::ErrorKind::Overrun,
         libc::CAN_ERR_ACK => embedded_can::ErrorKind::Acknowledge,
         libc::CAN_ERR_CRTL => {
-            if frame.data[1] & 0x01 != 0 {
+            if frame.data[1] & (libc::CAN_ERR_CRTL_RX_OVERFLOW as u8) != 0 {
                 embedded_can::ErrorKind::Overrun
             } else {
                 embedded_can::ErrorKind::Other
             }
         }
         libc::CAN_ERR_PROT => {
-            if frame.data[3] & 0x01 != 0 {
+            if frame.data[3] & (libc::CAN_ERR_PROT_BIT as u8) != 0 {
                 embedded_can::ErrorKind::Bit
-            } else if frame.data[3] & 0x02 != 0 {
+            } else if frame.data[3] & (libc::CAN_ERR_PROT_FORM as u8) != 0 {
                 embedded_can::ErrorKind::Form
-            } else if frame.data[3] & 0x04 != 0 {
+            } else if frame.data[3] & (libc::CAN_ERR_PROT_STUFF as u8) != 0 {
                 embedded_can::ErrorKind::Stuff
-            } else if frame.data[3] & 0x10 != 0 {
+            } else if frame.data[3] & (libc::CAN_ERR_PROT_BIT1 as u8) != 0 {
                 embedded_can::ErrorKind::Crc
             } else {
                 embedded_can::ErrorKind::Other
