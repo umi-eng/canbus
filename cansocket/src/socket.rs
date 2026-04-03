@@ -72,8 +72,6 @@ impl AsFd for LibcSocket {
 /// # Ok(())
 /// # }
 /// ```
-///
-/// Protocol errors are represented with the error type [`Error::Can`].
 pub struct Socket {
     fd: Async<LibcSocket>,
 }
@@ -107,6 +105,35 @@ impl Socket {
         Ok(Self {
             fd: Async::new(LibcSocket(fd))?,
         })
+    }
+
+    /// Enable receiving protocol errors as [`Error::Can`].
+    pub fn set_protocol_errors(&self, enabled: bool) -> std::io::Result<()> {
+        let err_mask = if enabled {
+            libc::CAN_ERR_TX_TIMEOUT
+                | libc::CAN_ERR_LOSTARB
+                | libc::CAN_ERR_CRTL
+                | libc::CAN_ERR_PROT
+                | libc::CAN_ERR_TRX
+                | libc::CAN_ERR_ACK
+                | libc::CAN_ERR_BUSOFF
+                | libc::CAN_ERR_BUSERROR
+                | libc::CAN_ERR_RESTARTED
+                | libc::CAN_ERR_CNT
+        } else {
+            0
+        };
+
+        check_return(unsafe {
+            libc::setsockopt(
+                self.fd.get_ref().0,
+                libc::SOL_CAN_RAW,
+                libc::CAN_RAW_ERR_FILTER,
+                &err_mask as *const _ as *const _,
+                std::mem::size_of_val(&err_mask) as _,
+            )
+        })
+        .map(|_| {})
     }
 
     /// Enable other socket listeners receiving sent frames.
