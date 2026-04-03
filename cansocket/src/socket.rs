@@ -248,31 +248,21 @@ where
 }
 
 fn check_error_frame(frame: &libc::can_frame) -> Result<(), embedded_can::ErrorKind> {
-    const CAN_ERR_FLAG: u32 = 0x20000000;
-    const CAN_ERR_MASK: u32 = 0x1FFFFFFF;
-
-    if (frame.can_id & CAN_ERR_FLAG) == 0 {
+    if (frame.can_id & libc::CAN_ERR_FLAG) == 0 {
         return Ok(());
     }
 
-    let error_class = frame.can_id & CAN_ERR_MASK;
-
-    const CAN_ERR_TX_TIMEOUT: u32 = 0x00000001;
-    const CAN_ERR_CRTL: u32 = 0x00000004;
-    const CAN_ERR_PROT: u32 = 0x00000008;
-    const CAN_ERR_ACK: u32 = 0x00000020;
-
-    let error_kind = match error_class {
-        CAN_ERR_TX_TIMEOUT => embedded_can::ErrorKind::Overrun,
-        CAN_ERR_ACK => embedded_can::ErrorKind::Acknowledge,
-        CAN_ERR_CRTL => {
+    Err(match frame.can_id & libc::CAN_ERR_MASK {
+        libc::CAN_ERR_TX_TIMEOUT => embedded_can::ErrorKind::Overrun,
+        libc::CAN_ERR_ACK => embedded_can::ErrorKind::Acknowledge,
+        libc::CAN_ERR_CRTL => {
             if frame.data[1] & 0x01 != 0 {
                 embedded_can::ErrorKind::Overrun
             } else {
                 embedded_can::ErrorKind::Other
             }
         }
-        CAN_ERR_PROT => {
+        libc::CAN_ERR_PROT => {
             if frame.data[3] & 0x01 != 0 {
                 embedded_can::ErrorKind::Bit
             } else if frame.data[3] & 0x02 != 0 {
@@ -286,9 +276,7 @@ fn check_error_frame(frame: &libc::can_frame) -> Result<(), embedded_can::ErrorK
             }
         }
         _ => embedded_can::ErrorKind::Other,
-    };
-
-    Err(error_kind)
+    })
 }
 
 #[cfg(test)]
