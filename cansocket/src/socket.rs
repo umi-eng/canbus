@@ -63,10 +63,14 @@ impl AsFd for LibcSocket {
 /// This provides both a blocking and async interface to a SocketCAN device.
 ///
 /// ```
+/// # use cansocket::Socket;
+/// # async fn example() -> Result<(), cansocket::Error> {
 /// // Open a socket.
 /// let socket = Socket::new("can0")?;
 /// // Receive a frame.
 /// let frame = socket.recv().await?;
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// Protocol errors are represented with the error type [`Error::Can`].
