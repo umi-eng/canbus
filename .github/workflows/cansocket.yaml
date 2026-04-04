@@ -23,5 +23,5 @@ jobs:
         uses: Swatinem/rust-cache@v2
         if: ${{ github.ref != 'refs/heads/main' }}
       - name: Run unit tests
-        working_directory: ./cansocket
+        working-directory: ./cansocket
         run: cargo test
