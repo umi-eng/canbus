@@ -15,7 +15,7 @@ impl std::fmt::Display for FrameCreateError {
 }
 
 /// CAN Bus frame.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Frame(pub libc::can_frame);
 
 impl Frame {
