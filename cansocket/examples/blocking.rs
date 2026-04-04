@@ -4,7 +4,7 @@
 
 fn main() -> Result<(), cansocket::Error> {
     let socket = cansocket::Socket::new("vcan0")?;
-    socket.set_recv_own_msgs(true)?;
+    socket.recv_own_msgs(true)?;
 
     println!("Sending a frame.");
     let id = embedded_can::StandardId::new(0x123).unwrap();

@@ -112,7 +112,7 @@ impl Socket {
     }
 
     /// Enable receiving protocol errors as [`Error::Can`].
-    pub fn set_protocol_errors(&self, enabled: bool) -> std::io::Result<()> {
+    pub fn protocol_errors(&self, enabled: bool) -> std::io::Result<()> {
         let err_mask = if enabled {
             libc::CAN_ERR_TX_TIMEOUT
                 | libc::CAN_ERR_LOSTARB
@@ -141,7 +141,7 @@ impl Socket {
     }
 
     /// Enable other socket listeners receiving sent frames.
-    pub fn set_loopback(&self, enabled: bool) -> std::io::Result<()> {
+    pub fn loopback(&self, enabled: bool) -> std::io::Result<()> {
         let loopback = c_int::from(enabled);
         check_return(unsafe {
             libc::setsockopt(
@@ -156,7 +156,7 @@ impl Socket {
     }
 
     /// Enable receiving own sent frames.
-    pub fn set_recv_own_msgs(&self, enabled: bool) -> std::io::Result<()> {
+    pub fn recv_own_msgs(&self, enabled: bool) -> std::io::Result<()> {
         let recv_own_msgs = c_int::from(enabled);
         check_return(unsafe {
             libc::setsockopt(
