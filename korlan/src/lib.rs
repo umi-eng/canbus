@@ -333,6 +333,7 @@ impl Device {
         }
 
         let device = info.open().await.map_err(Error::Usb)?;
+        device.reset().await.unwrap();
         // On macOS the device starts unconfigured (value 0); set_configuration
         // creates the IOUSBInterface objects that claim_interface needs.
         // On Linux this is a no-op when config 1 is already active.
