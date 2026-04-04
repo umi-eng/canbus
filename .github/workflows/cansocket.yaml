@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Set up vcan device
         run: |
@@ -24,4 +24,4 @@ jobs:
         if: ${{ github.ref != 'refs/heads/main' }}
       - name: Run unit tests
         working-directory: ./cansocket
-        run: cargo test
+        run: cargo test --lib
