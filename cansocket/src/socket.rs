@@ -179,7 +179,7 @@ impl Socket {
                     libc::send(
                         write.0,
                         &frame.0 as *const _ as *const _,
-                        std::mem::size_of::<libc::can_frame>(),
+                        std::mem::size_of_val(&frame.0),
                         0,
                     )
                 })
@@ -195,7 +195,7 @@ impl Socket {
                 match check_return(libc::send(
                     self.fd.get_ref().0,
                     &frame.0 as *const _ as *const _,
-                    std::mem::size_of::<libc::can_frame>(),
+                    std::mem::size_of_val(&frame.0),
                     0,
                 )) {
                     Ok(_) => return Ok(()),
@@ -218,7 +218,7 @@ impl Socket {
                     libc::recv(
                         read.0,
                         frame.as_mut_ptr() as *mut _,
-                        std::mem::size_of::<libc::can_frame>(),
+                        std::mem::size_of_val(&frame),
                         0,
                     )
                 })?;
@@ -239,7 +239,7 @@ impl Socket {
                 libc::recv(
                     self.fd.get_ref().0,
                     &mut frame as *mut _ as *mut _,
-                    std::mem::size_of::<libc::can_frame>(),
+                    std::mem::size_of_val(&frame),
                     0,
                 )
             }) {
