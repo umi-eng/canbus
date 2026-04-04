@@ -12,3 +12,9 @@ Examples and integration tests require a virtual device `vcan0` to be created.
 sudo ip link add dev vcan0 type vcan
 sudo ip link set up vcan0
 ```
+
+To skip the integration tests, pass the `--lib` flag to cargo.
+
+```sh
+cargo test --lib
+```
