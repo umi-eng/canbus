@@ -14,7 +14,7 @@ async fn main() -> Result<(), cansocket::Error> {
     socket.send(&frame).await?;
 
     println!("Receiving a frame.");
-    let frame = socket.recv().await;
+    let frame = socket.recv().await?;
     println!("Received: {:?}", frame);
 
     Ok(())
