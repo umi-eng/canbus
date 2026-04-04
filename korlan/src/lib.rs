@@ -333,6 +333,7 @@ impl Device {
         }
 
         let device = info.open().await.map_err(Error::Usb)?;
+        let _ = device.detach_kernel_driver(0); // try detach from kernel (only applicable to Linux)
         device.reset().await.unwrap();
         // On macOS the device starts unconfigured (value 0); set_configuration
         // creates the IOUSBInterface objects that claim_interface needs.
