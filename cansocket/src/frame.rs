@@ -16,7 +16,7 @@ impl std::fmt::Display for FrameCreateError {
 
 /// CAN Bus frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Frame(pub libc::can_frame);
+pub struct Frame(pub(crate) libc::can_frame);
 
 impl Frame {
     /// Create a new data frame.
@@ -87,6 +87,12 @@ impl embedded_can::Frame for Frame {
 
     fn data(&self) -> &[u8] {
         &self.0.data[..self.0.can_dlc as usize]
+    }
+}
+
+impl From<libc::can_frame> for Frame {
+    fn from(value: libc::can_frame) -> Self {
+        Self(value)
     }
 }
 
