@@ -1,4 +1,6 @@
-use crate::Frame;
+use crate::{
+    CanError, ControllerError, Frame, ProtocolErrorKind, ProtocolErrorLocation, TransceiverError,
+};
 use async_io::Async;
 use std::ffi::{CString, c_int};
 use std::io::ErrorKind;
@@ -8,8 +10,8 @@ use std::os::fd::{AsFd, BorrowedFd, RawFd};
 /// Error type.
 #[derive(Debug)]
 pub enum Error {
-    /// Protocol error.
-    Can(embedded_can::ErrorKind),
+    /// Bus error.
+    Can(CanError),
     /// IO error.
     Io(std::io::Error),
 }
@@ -17,7 +19,7 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Can(kind) => write!(f, "CAN Error: {}", kind),
+            Self::Can(err) => write!(f, "CAN Error: {:?}", err),
             Self::Io(err) => write!(f, "IO Error: {}", err),
         }
     }
@@ -26,7 +28,9 @@ impl std::fmt::Display for Error {
 impl embedded_can::Error for Error {
     fn kind(&self) -> embedded_can::ErrorKind {
         match self {
-            Self::Can(can) => can.kind(),
+            // it's not possible to assign a specific kind since multiple can be
+            // present at one time.
+            Self::Can(_) => embedded_can::ErrorKind::Other,
             Self::Io(err) => match err.kind() {
                 ErrorKind::WouldBlock => embedded_can::ErrorKind::Overrun,
                 ErrorKind::TimedOut => embedded_can::ErrorKind::Overrun,
@@ -42,8 +46,8 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl From<embedded_can::ErrorKind> for Error {
-    fn from(err: embedded_can::ErrorKind) -> Self {
+impl From<CanError> for Error {
+    fn from(err: CanError) -> Self {
         Self::Can(err)
     }
 }
@@ -278,35 +282,45 @@ where
     }
 }
 
-fn check_error_frame(frame: &libc::can_frame) -> Result<(), embedded_can::ErrorKind> {
+fn check_error_frame(frame: &libc::can_frame) -> Result<(), CanError> {
     if (frame.can_id & libc::CAN_ERR_FLAG) == 0 {
         return Ok(());
     }
 
-    Err(match frame.can_id & libc::CAN_ERR_MASK {
-        libc::CAN_ERR_TX_TIMEOUT => embedded_can::ErrorKind::Overrun,
-        libc::CAN_ERR_ACK => embedded_can::ErrorKind::Acknowledge,
-        libc::CAN_ERR_CRTL => {
-            if frame.data[1] & (libc::CAN_ERR_CRTL_RX_OVERFLOW as u8) != 0 {
-                embedded_can::ErrorKind::Overrun
-            } else {
-                embedded_can::ErrorKind::Other
-            }
-        }
-        libc::CAN_ERR_PROT => {
-            if frame.data[3] & (libc::CAN_ERR_PROT_BIT as u8) != 0 {
-                embedded_can::ErrorKind::Bit
-            } else if frame.data[3] & (libc::CAN_ERR_PROT_FORM as u8) != 0 {
-                embedded_can::ErrorKind::Form
-            } else if frame.data[3] & (libc::CAN_ERR_PROT_STUFF as u8) != 0 {
-                embedded_can::ErrorKind::Stuff
-            } else if frame.data[3] & (libc::CAN_ERR_PROT_BIT1 as u8) != 0 {
-                embedded_can::ErrorKind::Crc
-            } else {
-                embedded_can::ErrorKind::Other
-            }
-        }
-        _ => embedded_can::ErrorKind::Other,
+    Err(CanError {
+        tx_timeout: (frame.can_id & libc::CAN_ERR_TX_TIMEOUT) != 0,
+        lost_arbitration: if (frame.can_id & libc::CAN_ERR_LOSTARB) != 0 {
+            Some(frame.data[0])
+        } else {
+            None
+        },
+        controller: if (frame.can_id & libc::CAN_ERR_CRTL) != 0 {
+            Some(ControllerError(frame.data[1]))
+        } else {
+            None
+        },
+        protocol: if (frame.can_id & libc::CAN_ERR_PROT) != 0 {
+            Some((
+                ProtocolErrorKind(frame.data[2]),
+                ProtocolErrorLocation::try_from(frame.data[3]),
+            ))
+        } else {
+            None
+        },
+        transceiver: if (frame.can_id & libc::CAN_ERR_TRX) != 0 {
+            Some(TransceiverError(frame.data[4]))
+        } else {
+            None
+        },
+        no_ack: (frame.can_id & libc::CAN_ERR_ACK) != 0,
+        bus_off: (frame.can_id & libc::CAN_ERR_BUSOFF) != 0,
+        bus_error: (frame.can_id & libc::CAN_ERR_BUSERROR) != 0,
+        restarted: (frame.can_id & libc::CAN_ERR_RESTARTED) != 0,
+        tx_rx_error_count: if (frame.can_id & libc::CAN_ERR_CNT) != 0 {
+            Some((frame.data[6], frame.data[7]))
+        } else {
+            None
+        },
     })
 }
 
