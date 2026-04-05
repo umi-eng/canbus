@@ -1,7 +1,12 @@
 [package]
 name = "korlan"
+description = "Korlan USB2CAN driver"
 version = "0.1.0"
 edition = "2024"
+authors = ["Liam Kinne <liam@umi.engineering>"]
+readme = "README.md"
+repository = "https://github.com/umi-eng/canbus"
+license = "MPL-2.0"
 
 [dependencies]
 embedded-can = "0.4"
