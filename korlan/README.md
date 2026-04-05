@@ -5,7 +5,7 @@ isolated CAN interface capable of up to 2 MBit/s bitrates.
 
 # Example
 
-```no_run
+```rust
 # async fn run() -> Result<(), korlan::Error> {
 # use embedded_can::{Id, StandardId, ExtendedId};
 let info = korlan::list_devices()?.next().unwrap();
