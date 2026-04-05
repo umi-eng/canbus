@@ -5,10 +5,15 @@ edition = "2024"
 
 [dependencies]
 embedded-can = "0.4.1"
-nusb = { version = "0.2.3", features = ["tokio"] }
 thiserror = "2.0"
-tokio = { version = "1", features = ["sync", "rt", "rt-multi-thread"] }
+futures = "0.3"
 zerocopy = { version = "0.8.42", features = ["derive"] }
+nusb = { version = "0.2.3" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
+
+[features]
+default = ["tokio"]
+tokio = ["nusb/tokio"]
+smol = ["nusb/smol"]

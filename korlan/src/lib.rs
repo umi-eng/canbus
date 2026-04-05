@@ -1,11 +1,10 @@
 #![doc = include_str!("../README.md")]
 
+use futures::lock::Mutex;
 use nusb::{
-    DeviceInfo, Interface, MaybeFuture,
+    DeviceInfo, Interface,
     transfer::{Buffer, Bulk, Completion, In, Out, TransferError},
 };
-use std::time::Duration;
-use tokio::sync::Mutex;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 const VENDOR_ID: u16 = 0x0483;
@@ -30,7 +29,6 @@ const CMD_GET_SOFTW_HARDW_VER: u8 = 12;
 const BAUD_MANUAL: u8 = 0x09;
 const CMD_START: u8 = 0x11;
 const CMD_END: u8 = 0x22;
-const CMD_TIMEOUT: Duration = Duration::from_millis(1000);
 
 const DATA_START: u8 = 0x55;
 const DATA_END: u8 = 0xAA;
@@ -302,9 +300,9 @@ pub enum Error {
 }
 
 /// List all connected Korlan USB2CAN devices.
-pub fn list_devices() -> Result<impl Iterator<Item = DeviceInfo>, Error> {
+pub async fn list_devices() -> Result<impl Iterator<Item = DeviceInfo>, Error> {
     let iter = nusb::list_devices()
-        .wait()
+        .await
         .map_err(Error::Usb)?
         .filter(|d| d.vendor_id() == VENDOR_ID && d.product_id() == PRODUCT_ID);
     Ok(iter)
@@ -355,15 +353,10 @@ impl Device {
         // completes with kIOReturnAborted → TransferError::Cancelled, which is
         // indistinguishable from a real cancellation. Clear all four pipes
         // unconditionally here so we always start from a known-good state.
-        tokio::task::block_in_place(|| {
-            // Errors are intentionally ignored: on a clean pipe (no prior
-            // aborted session) ClearPipeStallBothEnds returns an error, so
-            // failure here is the normal case and not actionable.
-            let _ = cmd_tx.clear_halt().wait();
-            let _ = cmd_rx.clear_halt().wait();
-            let _ = data_tx.clear_halt().wait();
-            let _ = data_rx.clear_halt().wait();
-        });
+        let _ = cmd_tx.clear_halt().await;
+        let _ = cmd_rx.clear_halt().await;
+        let _ = data_tx.clear_halt().await;
+        let _ = data_rx.clear_halt().await;
 
         let this = Self {
             cmd_tx: Mutex::new(cmd_tx),
@@ -382,7 +375,8 @@ impl Device {
 
         let completion: Completion = {
             let mut ep = self.cmd_tx.lock().await;
-            tokio::task::block_in_place(|| ep.transfer_blocking(out_buf, CMD_TIMEOUT))
+            ep.submit(out_buf);
+            ep.next_complete().await
         };
         completion.into_result().map_err(Error::Transfer)?;
 
@@ -392,7 +386,8 @@ impl Device {
         let in_buf = Buffer::new(64);
         let completion: Completion = {
             let mut ep = self.cmd_rx.lock().await;
-            tokio::task::block_in_place(|| ep.transfer_blocking(in_buf, CMD_TIMEOUT))
+            ep.submit(in_buf);
+            ep.next_complete().await
         };
         let resp_buf = completion.into_result().map_err(Error::Transfer)?;
 
@@ -408,15 +403,19 @@ impl Device {
         let out_buf: Buffer = CmdMsg::new(CMD_RESET).to_bytes().to_vec().into();
         {
             let mut ep = self.cmd_tx.lock().await;
-            let c = tokio::task::block_in_place(|| ep.transfer_blocking(out_buf, CMD_TIMEOUT));
-            c.into_result().map_err(Error::Transfer)?;
+            ep.submit(out_buf);
+            ep.next_complete()
+                .await
+                .into_result()
+                .map_err(Error::Transfer)?;
         }
         // Read back the reset acknowledgement. The device responds with a
         // single CmdMsg whose command field is CMD_RESET.
         let in_buf = Buffer::new(64);
         let completion = {
             let mut ep = self.cmd_rx.lock().await;
-            tokio::task::block_in_place(|| ep.transfer_blocking(in_buf, CMD_TIMEOUT))
+            ep.submit(in_buf);
+            ep.next_complete().await
         };
         completion.into_result().map_err(Error::Transfer)?;
         Ok(())
@@ -505,7 +504,8 @@ impl Device {
         let buf: Buffer = msg.to_bytes().to_vec().into();
         let completion: Completion = {
             let mut ep = self.data_tx.lock().await;
-            tokio::task::block_in_place(|| ep.transfer_blocking(buf, Duration::from_secs(1)))
+            ep.submit(buf);
+            ep.next_complete().await
         };
         completion.into_result().map_err(Error::Transfer)?;
         Ok(())
@@ -535,7 +535,8 @@ impl Device {
             let rx = Buffer::new(512); // 512 = 8 × 64
             let completion: Completion = {
                 let mut ep = self.data_rx.lock().await;
-                tokio::task::block_in_place(|| ep.transfer_blocking(rx, Duration::from_secs(5)))
+                ep.submit(rx);
+                ep.next_complete().await
             };
             let filled = completion.into_result().map_err(Error::Transfer)?;
             self.rx_buf.lock().await.extend_from_slice(&filled);

@@ -7,15 +7,15 @@ use std::time::Duration;
 static HW_LOCK: std::sync::LazyLock<std::sync::Mutex<()>> =
     std::sync::LazyLock::new(|| std::sync::Mutex::new(()));
 
-fn first_device() -> Option<DeviceInfo> {
-    list_devices().ok()?.next()
+async fn first_device() -> Option<DeviceInfo> {
+    list_devices().await.ok()?.next()
 }
 
 #[tokio::test]
 async fn test_list() {
     let _guard = HW_LOCK.lock().unwrap();
 
-    let devices: Vec<_> = list_devices().expect("list_devices failed").collect();
+    let devices: Vec<_> = list_devices().await.expect("list_devices failed").collect();
     assert!(!devices.is_empty(), "no Korlan device found");
 }
 
@@ -23,7 +23,7 @@ async fn test_list() {
 async fn test_open_and_version() {
     let _guard = HW_LOCK.lock().unwrap();
 
-    let info = first_device().expect("no device");
+    let info = first_device().await.expect("no device");
     let dev = Device::open(info).await.expect("open failed");
     let ver = dev.version().await.expect("version failed");
     println!(
@@ -36,7 +36,7 @@ async fn test_open_and_version() {
 async fn test_set_bitrate() {
     let _guard = HW_LOCK.lock().unwrap();
 
-    let info = first_device().expect("no device");
+    let info = first_device().await.expect("no device");
     let dev = Device::open(info).await.expect("open failed");
     dev.set_bitrate(500_000).await.expect("set_bitrate failed");
     dev.close_channel().await.expect("close failed");
@@ -46,7 +46,7 @@ async fn test_set_bitrate() {
 async fn test_loopback_send_recv() {
     let _guard = HW_LOCK.lock().unwrap();
 
-    let info = first_device().expect("no device");
+    let info = first_device().await.expect("no device");
     let dev = Device::open(info).await.expect("open failed");
 
     dev.open_with(
@@ -88,7 +88,7 @@ async fn test_loopback_send_recv() {
 async fn test_extended_frame_loopback() {
     let _guard = HW_LOCK.lock().unwrap();
 
-    let info = first_device().expect("no device");
+    let info = first_device().await.expect("no device");
     let dev = Device::open(info).await.expect("open failed");
 
     dev.open_with(

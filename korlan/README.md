@@ -1,14 +1,18 @@
 # Driver for the 8Devices Korlan USB2CAN
 
 The [Korlan USB2CAN](https://www.8devices.com/products/korlan) is a galvanically
-isolated CAN interface capable of up to 2 MBit/s bitrates.
+isolated CAN interface capable of up to 2 MBit/s bitrates. This crate provides
+an async userspace driver built upon the pure-Rust
+[`nusb`](https://github.com/kevinmehall/nusb) which supports either
+[`tokio`](https://github.com/tokio-rs/tokio) or
+[`smol`](https://github.com/smol-rs/smol) as the runtime.
 
 # Example
 
 ```rust
 # async fn run() -> Result<(), korlan::Error> {
 # use embedded_can::{Id, StandardId, ExtendedId};
-let info = korlan::list_devices()?.next().unwrap();
+let info = korlan::list_devices().await?.next().unwrap();
 let device = korlan::Device::open(info).await?;
 let ver = device.version().await?;
 println!("fw {}.{} hw {}.{}", ver.fw_major, ver.fw_minor, ver.hw_major, ver.hw_minor);

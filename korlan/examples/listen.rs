@@ -1,6 +1,7 @@
 #[tokio::main]
 async fn main() {
     let info = korlan::list_devices()
+        .await
         .expect("List devices")
         .next()
         .expect("First device");
