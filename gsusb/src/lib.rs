@@ -318,7 +318,7 @@ pub fn timing_from_bitrate(bitrate: u32, timing: &CanBitTimingConst, fclk: u32) 
                         phase_seg1: tseg1,
                         phase_seg2: tseg2,
                         sjw: tseg2.min(4),
-                        brp: brp,
+                        brp,
                     };
                 }
             }
