@@ -1,7 +1,7 @@
 #![allow(unused)]
 
-use std::fmt::Debug;
 use embedded_can::{ExtendedId, Id, StandardId};
+use std::fmt::Debug;
 use zerocopy::{FromBytes, FromZeros, Immutable, IntoBytes};
 
 #[derive(Clone, Copy, FromBytes, IntoBytes, Immutable)]
