@@ -14,6 +14,7 @@ use protocol::*;
 use std::time::Duration;
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
+use crate::frame::ClassicCanTimestamp;
 pub use crate::frame::Frame;
 
 struct DeviceId {
@@ -259,7 +260,15 @@ impl Device {
     pub async fn send(&self, channel: u8, frame: &Frame) -> Result<(), Error> {
         let mut frame = frame.to_owned();
         frame.channel = channel;
-        let buffer = Buffer::from(frame.as_bytes().to_vec());
+
+        // only fd frames are over 64 byte and use two transfers.
+        let bytes = if frame.flags.fd() {
+            frame.as_bytes()
+        } else {
+            &frame.as_bytes()[..ClassicCanTimestamp::PADDING]
+        };
+        let buffer = Buffer::from(bytes.to_vec());
+
         let completion = {
             let mut ep = self.data_tx.lock().await;
             ep.submit(buffer);

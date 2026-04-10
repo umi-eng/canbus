@@ -149,7 +149,11 @@ pub(crate) union CanData {
 #[repr(C)]
 pub(crate) struct ClassicCan {
     pub data: [u8; 8],
-    _padding: [u8; 60],
+    _padding: [u8; Self::PADDING],
+}
+
+impl ClassicCan {
+    pub const PADDING: usize = 60;
 }
 
 #[derive(Debug, Clone, Copy, FromBytes, IntoBytes, Immutable)]
@@ -157,14 +161,22 @@ pub(crate) struct ClassicCan {
 pub(crate) struct ClassicCanTimestamp {
     pub data: [u8; 8],
     pub timestamp_us: u32,
-    _padding: [u8; 56],
+    _padding: [u8; Self::PADDING],
+}
+
+impl ClassicCanTimestamp {
+    pub const PADDING: usize = 56;
 }
 
 #[derive(Debug, Clone, Copy, FromBytes, IntoBytes, Immutable)]
 #[repr(C)]
 pub(crate) struct CanFd {
     pub data: [u8; 64],
-    _padding: [u8; 4],
+    _padding: [u8; Self::PADDING],
+}
+
+impl CanFd {
+    pub const PADDING: usize = 4;
 }
 
 #[derive(Debug, Clone, Copy, FromBytes, IntoBytes, Immutable)]
