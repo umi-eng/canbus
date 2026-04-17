@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## v0.1.1
+
 - Fix frame send data length
 - Use libc constants for error frame checking
 - Fix `Socket` doc test
