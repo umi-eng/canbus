@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Impl `std::error::Error` for socket error type.
+
 ## v0.1.1
 
 - Fix frame send data length
