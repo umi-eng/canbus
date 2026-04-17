@@ -143,6 +143,8 @@ pub struct DeviceBitTiming {
     pub brp: u32,
 }
 
+/// Bit timing constants. Used by the host to find settings for a required
+/// bitrate.
 #[derive(Debug, IntoBytes, FromBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct CanBitTimingConst {

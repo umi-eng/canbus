@@ -354,3 +354,29 @@ pub struct State {
     /// Transmit error count.
     pub tx_errors: u32,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_timing_from_bitrate() {
+        let target = 500_000;
+        let timing_const = CanBitTimingConst {
+            tseg1_min: 1,
+            tseg1_max: 255,
+            tseg2_min: 1,
+            tseg2_max: 127,
+            sjw_max: 127,
+            brp_min: 1,
+            brp_max: 511,
+            brp_inc: 1,
+        };
+        let timing = timing_from_bitrate(target, &timing_const, 8_000_000);
+        assert_eq!(timing.phase_seg1, 1);
+        assert_eq!(timing.phase_seg2, 14);
+        assert_eq!(timing.prop_seg, 1);
+        assert_eq!(timing.sjw, 4);
+        assert_eq!(timing.brp, 1);
+    }
+}
