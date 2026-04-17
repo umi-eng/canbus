@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Impl `std::error::Error` for frame create error type.
+
 ## v0.1.2
 
 - Impl `std::error::Error` for socket error type.
