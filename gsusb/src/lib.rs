@@ -73,8 +73,7 @@ pub async fn list_devices() -> Result<impl Iterator<Item = DeviceInfo>, Error> {
         .filter(|dev| {
             DEVICES
                 .iter()
-                .find(|d| dev.vendor_id() == d.vendor_id && dev.product_id() == d.product_id)
-                .is_some()
+                .any(|d| dev.vendor_id() == d.vendor_id && dev.product_id() == d.product_id)
         });
     Ok(iter)
 }
