@@ -271,4 +271,17 @@ mod tests {
         assert_eq!(Param4::from_raw(0xA).unwrap().value(), Some(0xA));
         assert_eq!(Param4::from_raw(0xF).unwrap().value(), None);
     }
+
+    #[test]
+    fn from_to_raw() {
+        assert_eq!(Param4::from_raw(0x1).unwrap().to_raw(), 0x1);
+        assert_eq!(Param8::from_raw(0x1).unwrap().to_raw(), 0x1);
+        assert_eq!(Param10::from_raw(0x1).unwrap().to_raw(), 0x1);
+        assert_eq!(Param12::from_raw(0x1).unwrap().to_raw(), 0x1);
+        assert_eq!(Param16::from_raw(0x1).unwrap().to_raw(), 0x1);
+        assert_eq!(Param20::from_raw(0x1).unwrap().to_raw(), 0x1);
+        assert_eq!(Param24::from_raw(0x1).unwrap().to_raw(), 0x1);
+        assert_eq!(Param28::from_raw(0x1).unwrap().to_raw(), 0x1);
+        assert_eq!(Param32::from_raw(0x1).unwrap().to_raw(), 0x1);
+    }
 }
