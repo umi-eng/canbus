@@ -136,7 +136,7 @@ impl<'a> Transfer<'a> {
 
         if let Some(packets_per_response) = self.rts.max_packets_per_response() {
             // send cts on nth data transfer
-            if msg.sequence() % packets_per_response == 0 {
+            if msg.sequence().is_multiple_of(packets_per_response) {
                 return Ok(Some(Response::Cts(ClearToSend::new(
                     self.rts.max_packets_per_response(),
                     self.rx_packets + 1,
