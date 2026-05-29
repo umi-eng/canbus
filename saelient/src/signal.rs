@@ -315,4 +315,72 @@ mod tests {
         assert_eq!(Param28::from_raw(0x1).unwrap().to_raw(), 0x1);
         assert_eq!(Param32::from_raw(0x1).unwrap().to_raw(), 0x1);
     }
+
+    #[test]
+    fn discrete_try_from_valid() {
+        assert_eq!(Discrete::try_from(0b00), Ok(Discrete::Disabled));
+        assert_eq!(Discrete::try_from(0b01), Ok(Discrete::Enabled));
+        assert_eq!(Discrete::try_from(0b10), Ok(Discrete::ErrorIndicator));
+        assert_eq!(Discrete::try_from(0b11), Ok(Discrete::NotAvailable));
+    }
+
+    #[test]
+    fn discrete_try_from_invalid() {
+        assert_eq!(Discrete::try_from(0x04), Err(0x04));
+        assert_eq!(Discrete::try_from(0xFF), Err(0xFF));
+    }
+
+    #[test]
+    fn discrete_into_u8() {
+        assert_eq!(u8::from(Discrete::Disabled), 0b00);
+        assert_eq!(u8::from(Discrete::Enabled), 0b01);
+        assert_eq!(u8::from(Discrete::ErrorIndicator), 0b10);
+        assert_eq!(u8::from(Discrete::NotAvailable), 0b11);
+    }
+
+    #[test]
+    fn discrete_roundtrip() {
+        for variant in [
+            Discrete::Disabled,
+            Discrete::Enabled,
+            Discrete::ErrorIndicator,
+            Discrete::NotAvailable,
+        ] {
+            assert_eq!(Discrete::try_from(u8::from(variant)), Ok(variant));
+        }
+    }
+
+    #[test]
+    fn command_try_from_valid() {
+        assert_eq!(Command::try_from(0b00), Ok(Command::Disable));
+        assert_eq!(Command::try_from(0b01), Ok(Command::Enable));
+        assert_eq!(Command::try_from(0b10), Ok(Command::Reserved));
+        assert_eq!(Command::try_from(0b11), Ok(Command::NoAction));
+    }
+
+    #[test]
+    fn command_try_from_invalid() {
+        assert_eq!(Command::try_from(0x04), Err(0x04));
+        assert_eq!(Command::try_from(0xFF), Err(0xFF));
+    }
+
+    #[test]
+    fn command_into_u8() {
+        assert_eq!(u8::from(Command::Disable), 0b00);
+        assert_eq!(u8::from(Command::Enable), 0b01);
+        assert_eq!(u8::from(Command::Reserved), 0b10);
+        assert_eq!(u8::from(Command::NoAction), 0b11);
+    }
+
+    #[test]
+    fn command_roundtrip() {
+        for variant in [
+            Command::Disable,
+            Command::Enable,
+            Command::Reserved,
+            Command::NoAction,
+        ] {
+            assert_eq!(Command::try_from(u8::from(variant)), Ok(variant));
+        }
+    }
 }
