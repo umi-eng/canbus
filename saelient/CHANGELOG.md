@@ -8,9 +8,6 @@
 - Fix spatial pointer flag not being set in memory request.
 - Fix wrong binary operation in masking sender role bits for transport message.
 - Fix SLOT forward transfer function order of operations.
-
-### Added
-
 - Module doc-comment titles.
 
 ## v0.2.0
