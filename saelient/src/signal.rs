@@ -40,7 +40,13 @@ pub trait Signal: Sized {
 }
 
 macro_rules! signal_impl {
-    ($type:ident, $base:ty, $valid:pat, $indicator:pat, $error:pat, $not_present:pat) => {
+    (
+        $type:ident, $base:ty,
+        valid: $valid_min:literal ..= $valid_max:literal,
+        indicator: $indicator_min:literal ..= $indicator_max:literal,
+        error: $error_min:literal ..= $error_max:literal,
+        not_present: $not_present_min:literal ..= $not_present_max:literal $(,)?
+    ) => {
         /// Parameter signal.
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         #[cfg_attr(feature = "defmt-1", derive(defmt::Format))]
@@ -51,7 +57,10 @@ macro_rules! signal_impl {
 
             fn from_raw(value: $base) -> Option<Self> {
                 match value {
-                    $valid | $indicator | $error | $not_present => Some(Self(value)),
+                    $valid_min..=$valid_max
+                    | $indicator_min..=$indicator_max
+                    | $error_min..=$error_max
+                    | $not_present_min..=$not_present_max => Some(Self(value)),
                     _ => None,
                 }
             }
@@ -66,7 +75,7 @@ macro_rules! signal_impl {
 
             fn is_valid(&self) -> bool {
                 match self.0 {
-                    $valid => true,
+                    $valid_min..=$valid_max => true,
                     _ => false,
                 }
             }
@@ -81,7 +90,7 @@ macro_rules! signal_impl {
 
             fn is_indicator(&self) -> bool {
                 match self.0 {
-                    $indicator => true,
+                    $indicator_min..=$indicator_max => true,
                     _ => false,
                 }
             }
@@ -92,7 +101,7 @@ macro_rules! signal_impl {
 
             fn is_error(&self) -> bool {
                 match self.0 {
-                    $error => true,
+                    $error_min..=$error_max => true,
                     _ => false,
                 }
             }
@@ -107,7 +116,7 @@ macro_rules! signal_impl {
 
             fn is_not_present(&self) -> bool {
                 match self.0 {
-                    $not_present => true,
+                    $not_present_min..=$not_present_max => true,
                     _ => false,
                 }
             }
@@ -127,56 +136,78 @@ macro_rules! signal_impl {
     };
 }
 
-signal_impl!(Param4, u8, 0x0..=0xA, 0xB, 0xE, 0xF);
-signal_impl!(Param8, u8, 0x00..=0xFA, 0xFB, 0xFE, 0xFF);
-signal_impl!(Param10, u16, 0x000..=0x3FA, 0x3FB, 0x3FE, 0x3FF);
+// rustfmt::skip
+signal_impl!(
+    Param4,
+    u8,
+    valid:          0x00..=0x0A,
+    indicator:      0x0B..=0x0B,
+    error:          0x0E..=0x0E,
+    not_present:    0x0F..=0x0F,
+);
+signal_impl!(
+    Param8,
+    u8,
+    valid:          0x00..=0xFA,
+    indicator:      0xFB..=0xFB,
+    error:          0xFE..=0xFE,
+    not_present:    0xFF..=0xFF,
+);
+signal_impl!(
+    Param10,
+    u16,
+    valid:          0x000..=0x3FA,
+    indicator:      0x3FB..=0x3FB,
+    error:          0x3FE..=0x3FE,
+    not_present:    0x3FF..=0x3FF,
+);
 signal_impl!(
     Param12,
     u16,
-    0x000..=0xFAF,
-    0xFB0..=0xFBF,
-    0xFE0..=0xFEF,
-    0xFF0..=0xFFF
+    valid:          0x000..=0xFAF,
+    indicator:      0xFB0..=0xFBF,
+    error:          0xFE0..=0xFEF,
+    not_present:    0xFF0..=0xFFF,
 );
 signal_impl!(
     Param16,
     u16,
-    0x0000..=0xFAFF,
-    0xFB00..=0xFBFF,
-    0xFE00..=0xFEFF,
-    0xFF00..=0xFFFF
+    valid:          0x0000..=0xFAFF,
+    indicator:      0xFB00..=0xFBFF,
+    error:          0xFE00..=0xFEFF,
+    not_present:    0xFF00..=0xFFFF,
 );
 signal_impl!(
     Param20,
     u32,
-    0x00000..=0xFAFFF,
-    0xFB000..=0xFBFFF,
-    0xFE000..=0xFEFFF,
-    0xFF000..=0xFFFFF
+    valid:          0x00000..=0xFAFFF,
+    indicator:      0xFB000..=0xFBFFF,
+    error:          0xFE000..=0xFEFFF,
+    not_present:    0xFF000..=0xFFFFF,
 );
 signal_impl!(
     Param24,
     u32,
-    0x000000..=0xFAFFFF,
-    0xFB0000..=0xFBFFFF,
-    0xFE0000..=0xFEFFFF,
-    0xFF0000..=0xFFFFFF
+    valid:          0x000000..=0xFAFFFF,
+    indicator:      0xFB0000..=0xFBFFFF,
+    error:          0xFE0000..=0xFEFFFF,
+    not_present:    0xFF0000..=0xFFFFFF,
 );
 signal_impl!(
     Param28,
     u32,
-    0x0000000..=0xFAFFFFF,
-    0xFB00000..=0xFBFFFFF,
-    0xFE00000..=0xFEFFFFF,
-    0xFF00000..=0xFFFFFFF
+    valid:          0x0000000..=0xFAFFFFF,
+    indicator:      0xFB00000..=0xFBFFFFF,
+    error:          0xFE00000..=0xFEFFFFF,
+    not_present:    0xFF00000..=0xFFFFFFF,
 );
 signal_impl!(
     Param32,
     u32,
-    0x00000000..=0xFAFFFFFF,
-    0xFB000000..=0xFBFFFFFF,
-    0xFE000000..=0xFEFFFFFF,
-    0xFF000000..=0xFFFFFFFF
+    valid:          0x00000000..=0xFAFFFFFF,
+    indicator:      0xFB000000..=0xFBFFFFFF,
+    error:          0xFE000000..=0xFEFFFFFF,
+    not_present:    0xFF000000..=0xFFFFFFFF,
 );
 
 /// Discrete parameter
