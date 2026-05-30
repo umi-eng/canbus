@@ -9,6 +9,7 @@
 - Fix wrong binary operation in masking sender role bits for transport message.
 - Fix SLOT forward transfer function order of operations.
 - Module doc-comment titles.
+- Improve unit test coverage across all modules.
 
 ## v0.2.0
 
