@@ -481,4 +481,236 @@ mod tests {
         let rq = MemoryAccessRequest::new(Command::Write, Pointer::Spatial(0x5432), 125, 0x0102);
         assert_eq!(rq.raw, [0x7D, 0x14, 0x32, 0x54, 0x00, 0x00, 0x02, 0x01]);
     }
+
+    #[test]
+    fn memory_access_request_try_from_too_short() {
+        let short: &[u8] = &[0x01, 0x02, 0x03];
+        assert!(MemoryAccessRequest::try_from(short).is_err());
+        // error should return the original slice
+        assert_eq!(MemoryAccessRequest::try_from(short).unwrap_err(), short);
+    }
+
+    #[test]
+    fn memory_access_request_all_commands_roundtrip() {
+        let commands = [
+            Command::Erase,
+            Command::Read,
+            Command::Write,
+            Command::StatusRequest,
+            Command::OperationCompleted,
+            Command::OperationFailed,
+            Command::BootLoad,
+            Command::EdcpGeneration,
+        ];
+        for cmd in commands {
+            let rq = MemoryAccessRequest::new(cmd, Pointer::Direct(0), 0, 0);
+            assert_eq!(rq.command(), cmd);
+        }
+    }
+
+    #[test]
+    fn memory_access_request_max_length() {
+        let max_len = 0b11111111111u16; // 2047
+        let rq = MemoryAccessRequest::new(Command::Read, Pointer::Direct(0), max_len, 0);
+        assert_eq!(rq.length(), max_len);
+    }
+
+    #[test]
+    fn memory_access_request_key_or_user_level() {
+        let rq = MemoryAccessRequest::new(Command::Read, Pointer::Direct(0), 0, 0xABCD);
+        assert_eq!(rq.key_or_user_level(), 0xABCD);
+    }
+
+    #[test]
+    #[should_panic]
+    fn memory_access_request_length_overflow_panics() {
+        MemoryAccessRequest::new(Command::Read, Pointer::Direct(0), 0b100000000000, 0);
+    }
+
+    #[test]
+    fn command_other_roundtrip() {
+        let cmd = Command::Other(42);
+        let val: u8 = cmd.into();
+        assert_eq!(val, 42);
+        assert_eq!(Command::from(42u8), Command::Other(42));
+        assert_eq!(cmd, Command::Other(42));
+    }
+
+    #[test]
+    fn command_equality_via_value() {
+        // Command::Other with matching underlying values are equal
+        assert_eq!(Command::Other(7), Command::EdcpGeneration);
+        assert_ne!(Command::Other(1), Command::Other(2));
+    }
+
+    #[test]
+    fn memory_access_response_construct_and_getters() {
+        let resp = MemoryAccessResponse::new(Status::Proceed, ErrorIndicator::None, 100, 0x1234);
+        assert_eq!(resp.length(), 100);
+        assert_eq!(resp.status(), Status::Proceed);
+        assert_eq!(resp.error_indicator(), ErrorIndicator::None);
+        assert_eq!(resp.seed(), 0x1234);
+    }
+
+    #[test]
+    fn memory_access_response_all_statuses() {
+        let statuses = [
+            Status::Proceed,
+            Status::Busy,
+            Status::OperationCompleted,
+            Status::OperationFailed,
+        ];
+        for status in statuses {
+            let resp = MemoryAccessResponse::new(status, ErrorIndicator::None, 0, 0);
+            assert_eq!(resp.status(), status);
+        }
+    }
+
+    #[test]
+    fn memory_access_response_status_other_roundtrip() {
+        let s = Status::Other(2);
+        let val: u8 = s.into();
+        assert_eq!(val, 2);
+        assert_eq!(Status::from(2u8), Status::Other(2));
+        assert_eq!(s, Status::Other(2));
+    }
+
+    #[test]
+    fn memory_access_response_status_equality_via_value() {
+        assert_eq!(Status::Other(0), Status::Proceed);
+        assert_ne!(Status::Other(1), Status::Other(2));
+    }
+
+    #[test]
+    fn memory_access_response_try_from_roundtrip() {
+        let resp = MemoryAccessResponse::new(
+            Status::OperationFailed,
+            ErrorIndicator::Security,
+            512,
+            0xBEEF,
+        );
+        let bytes: [u8; 8] = (&resp).into();
+        let resp2 = MemoryAccessResponse::try_from(bytes.as_ref()).unwrap();
+        assert_eq!(resp, resp2);
+    }
+
+    #[test]
+    fn memory_access_response_try_from_too_short() {
+        let short: &[u8] = &[0x00; 4];
+        assert!(MemoryAccessResponse::try_from(short).is_err());
+    }
+
+    #[test]
+    #[should_panic]
+    fn memory_access_response_length_overflow_panics() {
+        MemoryAccessResponse::new(Status::Proceed, ErrorIndicator::None, 0b100000000000, 0);
+    }
+
+    #[test]
+    fn memory_access_response_max_length() {
+        let max = 0b11111111111u16;
+        let resp = MemoryAccessResponse::new(Status::Busy, ErrorIndicator::None, max, 0);
+        assert_eq!(resp.length(), max);
+    }
+
+    #[test]
+    fn error_indicator_all_named_roundtrip() {
+        let indicators = [
+            ErrorIndicator::None,
+            ErrorIndicator::NotIdentified,
+            ErrorIndicator::BusyForSomeoneElse,
+            ErrorIndicator::BusyErase,
+            ErrorIndicator::BusyRead,
+            ErrorIndicator::BusyWrite,
+            ErrorIndicator::BusyStatus,
+            ErrorIndicator::BusyBootLoad,
+            ErrorIndicator::BusyEdcpGeneration,
+            ErrorIndicator::BusyUnspecified,
+            ErrorIndicator::EdcPrameterNotCorrect,
+            ErrorIndicator::RamVerifyOnWrite,
+            ErrorIndicator::FlashVerifyOnWrite,
+            ErrorIndicator::PromVerifyOnWrite,
+            ErrorIndicator::InternalFailure,
+            ErrorIndicator::AddressingGeneral,
+            ErrorIndicator::AddressingBoundary,
+            ErrorIndicator::AddressingLength,
+            ErrorIndicator::AddressingOutOfBounds,
+            ErrorIndicator::AddressingRequiresEraseData,
+            ErrorIndicator::AddressingRequiresEraseProgram,
+            ErrorIndicator::AddressingRequiresTransferAndEraseProgram,
+            ErrorIndicator::AddressingBootLoadExecutableMemory,
+            ErrorIndicator::AddressingBootLoadInvalidBoundary,
+            ErrorIndicator::DataValueRange,
+            ErrorIndicator::DataNameRange,
+            ErrorIndicator::Security,
+            ErrorIndicator::SecurityInvalidPassword,
+            ErrorIndicator::SecurityInvalidUserLevel,
+            ErrorIndicator::SecurityInvalidKey,
+            ErrorIndicator::SecurityNotInDiagnosticMode,
+            ErrorIndicator::SecurityNotInDevelopmentMode,
+            ErrorIndicator::SecurityEngineRunning,
+            ErrorIndicator::SecurityNotInPark,
+            ErrorIndicator::AbortFromSoftwareProcess,
+            ErrorIndicator::TooManyRetries,
+            ErrorIndicator::NoResponseInTimeAllowed,
+            ErrorIndicator::TransportDataNotInitiated,
+            ErrorIndicator::TransportDataNotCompleted,
+            ErrorIndicator::NoIndicatorAvailable,
+        ];
+        for indicator in indicators {
+            let val: u32 = indicator.into();
+            let back = ErrorIndicator::from(val);
+            assert_eq!(back, indicator, "roundtrip failed for {indicator:?}");
+        }
+    }
+
+    #[test]
+    fn error_indicator_other_roundtrip() {
+        let ei = ErrorIndicator::Other(0x000005);
+        let val: u32 = ei.into();
+        assert_eq!(val, 5);
+        assert_eq!(ErrorIndicator::from(5u32), ErrorIndicator::Other(5));
+        assert_eq!(ei, ErrorIndicator::Other(5));
+        assert_ne!(ei, ErrorIndicator::None);
+    }
+
+    #[test]
+    fn error_indicator_response_roundtrip_via_bytes() {
+        // verify error indicator survives encode/decode through MemoryAccessResponse
+        let indicators = [
+            ErrorIndicator::Security,
+            ErrorIndicator::AddressingOutOfBounds,
+            ErrorIndicator::NoIndicatorAvailable,
+            ErrorIndicator::BusyBootLoad,
+        ];
+        for ei in indicators {
+            let resp = MemoryAccessResponse::new(Status::OperationFailed, ei, 0, 0);
+            let bytes: [u8; 8] = (&resp).into();
+            let resp2 = MemoryAccessResponse::try_from(bytes.as_ref()).unwrap();
+            assert_eq!(resp2.error_indicator(), ei, "failed for {ei:?}");
+        }
+    }
+
+    #[test]
+    fn boot_load_data_try_from_and_data() {
+        let raw: &[u8] = &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let bl = BootLoadData::try_from(raw).unwrap();
+        assert_eq!(bl.data(), [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]);
+        let bytes: [u8; 8] = (&bl).into();
+        assert_eq!(bytes, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]);
+    }
+
+    #[test]
+    fn boot_load_data_try_from_too_short() {
+        let short: &[u8] = &[0x01, 0x02];
+        assert!(BootLoadData::try_from(short).is_err());
+        assert_eq!(BootLoadData::try_from(short).unwrap_err(), short);
+    }
+
+    #[test]
+    fn pointer_equality() {
+        assert_eq!(Pointer::Direct(42), Pointer::Direct(42));
+        assert_ne!(Pointer::Direct(42), Pointer::Spatial(42));
+        assert_ne!(Pointer::Direct(1), Pointer::Direct(2));
+    }
 }
