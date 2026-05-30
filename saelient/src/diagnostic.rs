@@ -447,7 +447,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn memory_access_request() {
+    fn memory_access_request_from_raw_direct() {
         let raw: &[u8] = &[0x20, 0x22, 0x45, 0x23, 0x01, 0x00, 0x00, 0x00];
 
         let rq = MemoryAccessRequest::try_from(raw).unwrap();
@@ -461,9 +461,24 @@ mod tests {
     }
 
     #[test]
-    fn memory_access_request_spatial() {
-        let rq = MemoryAccessRequest::new(Command::Read, Pointer::Spatial(0x012345), 288, 0);
+    fn memory_access_request_from_raw_spatial() {
         let raw: &[u8] = &[0x20, 0x32, 0x45, 0x23, 0x01, 0x00, 0x00, 0x00];
-        assert_eq!(rq.raw, raw);
+
+        let rq = MemoryAccessRequest::try_from(raw).unwrap();
+        assert_eq!(rq.length(), 288);
+        assert_eq!(rq.command(), Command::Read);
+        assert_eq!(rq.pointer(), Pointer::Spatial(0x012345));
+
+        let bytes: [u8; 8] = (&rq).into();
+        assert_eq!(raw, bytes);
+    }
+
+    #[test]
+    fn memory_access_request_construct() {
+        let rq = MemoryAccessRequest::new(Command::Erase, Pointer::Direct(0x5432), 125, 0x0102);
+        assert_eq!(rq.raw, [0x7D, 0x00, 0x32, 0x54, 0x00, 0x00, 0x02, 0x01]);
+
+        let rq = MemoryAccessRequest::new(Command::Write, Pointer::Spatial(0x5432), 125, 0x0102);
+        assert_eq!(rq.raw, [0x7D, 0x14, 0x32, 0x54, 0x00, 0x00, 0x02, 0x01]);
     }
 }
