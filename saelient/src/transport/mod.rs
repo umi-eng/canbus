@@ -183,4 +183,169 @@ mod tests {
             &[1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, 1, 2]
         );
     }
+
+    fn dt(seq: u8, data: [u8; 7]) -> DataTransfer {
+        let mut raw = [0u8; 8];
+        raw[0] = seq;
+        raw[1..].copy_from_slice(&data);
+        DataTransfer::try_from(raw.as_ref()).unwrap()
+    }
+
+    #[test]
+    fn finished_returns_none_before_complete() {
+        let rts = RequestToSend::new(14, None, Pgn::Request);
+        let transfer = Transfer::new(rts);
+        assert!(transfer.finished().is_none());
+    }
+
+    #[test]
+    fn transfer_with_borrowed_storage_full_roundtrip() {
+        // 9 bytes = 2 packets, no CTS limit
+        let pgn = Pgn::Request;
+        let rts = RequestToSend::new(9, None, pgn);
+        let mut buf = [0u8; 14]; // 2 * 7
+        let mut transfer = Transfer::new_with_storage(rts, buf.as_mut());
+
+        assert!(transfer.finished().is_none());
+
+        // packet 1
+        let resp = transfer
+            .next(dt(1, [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11]))
+            .unwrap();
+        assert!(resp.is_none(), "no response mid-transfer without CTS limit");
+
+        // packet 2 - should return EndOfMsgAck
+        let resp = transfer
+            .next(dt(2, [0x22, 0x33, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]))
+            .unwrap();
+        assert!(matches!(resp, Some(Response::End(_))));
+
+        let data = transfer.finished().unwrap();
+        assert_eq!(
+            data,
+            &[0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22, 0x33]
+        );
+    }
+
+    #[test]
+    fn transfer_with_borrowed_storage_cts_triggered() {
+        // 16 bytes, max 2 packets per CTS window
+        let pgn = Pgn::Request;
+        let rts = RequestToSend::new(16, Some(2), pgn);
+        let mut buf = [0u8; 21];
+        let mut transfer = Transfer::new_with_storage(rts, buf.as_mut());
+
+        transfer.next(dt(1, [1, 2, 3, 4, 5, 6, 7])).unwrap();
+
+        let resp = transfer.next(dt(2, [8, 9, 10, 11, 12, 13, 14])).unwrap();
+        assert!(
+            matches!(&resp, Some(Response::Cts(cts)) if cts.next_sequence() == 3),
+            "expected CTS after 2nd packet"
+        );
+
+        let resp = transfer
+            .next(dt(3, [15, 16, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]))
+            .unwrap();
+        assert!(matches!(resp, Some(Response::End(_))));
+
+        assert_eq!(
+            transfer.finished().unwrap(),
+            &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        );
+    }
+
+    #[test]
+    fn transfer_borrowed_storage_too_small_returns_error() {
+        // buffer only fits 1 packet (7 bytes) but transfer needs 2
+        let rts = RequestToSend::new(9, None, Pgn::Request);
+        let mut buf = [0u8; 7];
+        let mut transfer = Transfer::new_with_storage(rts, buf.as_mut());
+
+        transfer.next(dt(1, [1, 2, 3, 4, 5, 6, 7])).unwrap();
+
+        let err = transfer
+            .next(dt(2, [8, 9, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]))
+            .unwrap_err();
+        assert!(matches!(err.0, Error::StorageTooSmall));
+        assert_eq!(err.1.reason(), AbortReason::Custom);
+        assert_eq!(err.1.sender_role(), AbortSenderRole::Receiver);
+    }
+
+    #[test]
+    fn out_of_order_packet_returns_sequence_error() {
+        let rts = RequestToSend::new(14, None, Pgn::Request);
+        let mut transfer = Transfer::new(rts);
+
+        // send packet 2 before packet 1
+        let err = transfer.next(dt(2, [1, 2, 3, 4, 5, 6, 7])).unwrap_err();
+        assert!(matches!(err.0, Error::Sequence));
+        assert_eq!(err.1.reason(), AbortReason::BadSequenceNumber);
+        assert_eq!(err.1.sender_role(), AbortSenderRole::Receiver);
+    }
+
+    #[test]
+    fn duplicate_packet_returns_sequence_error() {
+        let rts = RequestToSend::new(14, None, Pgn::Request);
+        let mut transfer = Transfer::new(rts);
+
+        transfer.next(dt(1, [1, 2, 3, 4, 5, 6, 7])).unwrap();
+        // send packet 1 again instead of packet 2
+        let err = transfer.next(dt(1, [1, 2, 3, 4, 5, 6, 7])).unwrap_err();
+        assert!(matches!(err.0, Error::Sequence));
+    }
+
+    #[test]
+    fn any_packet_after_abort_returns_previous_abort_error() {
+        let rts = RequestToSend::new(14, None, Pgn::Request);
+        let mut transfer = Transfer::new(rts);
+
+        // trigger an abort with a bad sequence number
+        transfer.next(dt(99, [0; 7])).unwrap_err();
+
+        // any subsequent call should return PreviousAbort
+        let err = transfer.next(dt(1, [0; 7])).unwrap_err();
+        assert!(matches!(err.0, Error::PreviousAbort));
+        assert_eq!(err.1.reason(), AbortReason::UnexpectedDataTransfer);
+        assert_eq!(err.1.sender_role(), AbortSenderRole::Receiver);
+    }
+
+    #[test]
+    fn response_cts_into_bytes() {
+        let cts = ClearToSend::new(Some(5), 3, Pgn::Request);
+        let resp = Response::Cts(cts.clone());
+        let from_resp: [u8; 8] = (&resp).into();
+        let from_cts: [u8; 8] = (&cts).into();
+        assert_eq!(from_resp, from_cts);
+    }
+
+    #[test]
+    fn response_end_into_bytes() {
+        let end = EndOfMessageAck::new(16, 3, Pgn::Request);
+        let resp = Response::End(end.clone());
+        let from_resp: [u8; 8] = (&resp).into();
+        let from_end: [u8; 8] = (&end).into();
+        assert_eq!(from_resp, from_end);
+    }
+
+    #[test]
+    fn no_cts_when_no_limit() {
+        // 3 packets, no CTS limit - only EndOfMsgAck at the end, nothing in between
+        let rts = RequestToSend::new(21, None, Pgn::Request);
+        let mut transfer = Transfer::new(rts);
+
+        assert!(
+            transfer
+                .next(dt(1, [1, 2, 3, 4, 5, 6, 7]))
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            transfer
+                .next(dt(2, [8, 9, 10, 11, 12, 13, 14]))
+                .unwrap()
+                .is_none()
+        );
+        let resp = transfer.next(dt(3, [15, 16, 17, 18, 19, 20, 21])).unwrap();
+        assert!(matches!(resp, Some(Response::End(_))));
+    }
 }
