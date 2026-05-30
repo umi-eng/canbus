@@ -3,10 +3,13 @@
 mod message;
 
 use managed::ManagedSlice;
-pub use message::{
-    AbortReason, AbortSenderRole, ClearToSend, ConnectionAbort, DataTransfer, EndOfMessageAck,
-    RequestToSend,
-};
+pub use message::AbortReason;
+pub use message::AbortSenderRole;
+pub use message::ClearToSend;
+pub use message::ConnectionAbort;
+pub use message::DataTransfer;
+pub use message::EndOfMessageAck;
+pub use message::RequestToSend;
 
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "defmt-1", derive(defmt::Format))]

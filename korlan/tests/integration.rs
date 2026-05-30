@@ -1,5 +1,10 @@
 use embedded_can::Frame as _;
-use korlan::{BitTiming, CanMessage, ChannelOptions, Device, Frame, list_devices};
+use korlan::BitTiming;
+use korlan::CanMessage;
+use korlan::ChannelOptions;
+use korlan::Device;
+use korlan::Frame;
+use korlan::list_devices;
 use nusb::DeviceInfo;
 use std::time::Duration;
 

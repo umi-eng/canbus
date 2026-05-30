@@ -1,4 +1,6 @@
-use embedded_can::{ExtendedId, Id, StandardId};
+use embedded_can::ExtendedId;
+use embedded_can::Id;
+use embedded_can::StandardId;
 
 /// Frame creation error.
 #[derive(Debug)]

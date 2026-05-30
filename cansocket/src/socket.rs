@@ -1,11 +1,17 @@
-use crate::{
-    CanError, ControllerError, Frame, ProtocolErrorKind, ProtocolErrorLocation, TransceiverError,
-};
+use crate::CanError;
+use crate::ControllerError;
+use crate::Frame;
+use crate::ProtocolErrorKind;
+use crate::ProtocolErrorLocation;
+use crate::TransceiverError;
 use async_io::Async;
-use std::ffi::{CString, c_int};
+use std::ffi::CString;
+use std::ffi::c_int;
 use std::io::ErrorKind;
 use std::mem::MaybeUninit;
-use std::os::fd::{AsFd, BorrowedFd, RawFd};
+use std::os::fd::AsFd;
+use std::os::fd::BorrowedFd;
+use std::os::fd::RawFd;
 
 /// Error type.
 #[derive(Debug)]

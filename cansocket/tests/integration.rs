@@ -1,4 +1,5 @@
-use cansocket::{Error, Frame};
+use cansocket::Error;
+use cansocket::Frame;
 
 /// Serialize tests to prevent multiple access to vcan device.
 static LOCK: std::sync::LazyLock<std::sync::Mutex<()>> =

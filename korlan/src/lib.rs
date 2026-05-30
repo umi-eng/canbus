@@ -1,11 +1,18 @@
 #![doc = include_str!("../README.md")]
 
 use futures::lock::Mutex;
-use nusb::{
-    DeviceInfo, Interface,
-    transfer::{Buffer, Bulk, Completion, In, Out, TransferError},
-};
-use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
+use nusb::DeviceInfo;
+use nusb::Interface;
+use nusb::transfer::Buffer;
+use nusb::transfer::Bulk;
+use nusb::transfer::Completion;
+use nusb::transfer::In;
+use nusb::transfer::Out;
+use nusb::transfer::TransferError;
+use zerocopy::FromBytes;
+use zerocopy::Immutable;
+use zerocopy::IntoBytes;
+use zerocopy::KnownLayout;
 
 const VENDOR_ID: u16 = 0x0483;
 const PRODUCT_ID: u16 = 0x1234;

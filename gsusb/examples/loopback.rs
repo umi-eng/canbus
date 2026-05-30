@@ -1,5 +1,7 @@
-use embedded_can::{Frame, StandardId};
-use gsusb::{ChannelOptions, Error};
+use embedded_can::Frame;
+use embedded_can::StandardId;
+use gsusb::ChannelOptions;
+use gsusb::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

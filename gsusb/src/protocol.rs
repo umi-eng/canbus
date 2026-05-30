@@ -1,7 +1,10 @@
 #![allow(unused)]
 
 use std::ops::BitOrAssign;
-use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
+use zerocopy::FromBytes;
+use zerocopy::Immutable;
+use zerocopy::IntoBytes;
+use zerocopy::KnownLayout;
 
 /// USB control request types.
 #[derive(Debug)]

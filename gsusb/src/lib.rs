@@ -4,15 +4,24 @@ mod frame;
 mod protocol;
 
 use futures::lock::Mutex;
-use nusb::{
-    DeviceInfo, Endpoint, Interface, MaybeFuture,
-    transfer::{
-        Buffer, Bulk, ControlIn, ControlOut, ControlType, In, Out, Recipient, TransferError,
-    },
-};
+use nusb::DeviceInfo;
+use nusb::Endpoint;
+use nusb::Interface;
+use nusb::MaybeFuture;
+use nusb::transfer::Buffer;
+use nusb::transfer::Bulk;
+use nusb::transfer::ControlIn;
+use nusb::transfer::ControlOut;
+use nusb::transfer::ControlType;
+use nusb::transfer::In;
+use nusb::transfer::Out;
+use nusb::transfer::Recipient;
+use nusb::transfer::TransferError;
 use protocol::*;
 use std::time::Duration;
-use zerocopy::{FromBytes, FromZeros, IntoBytes};
+use zerocopy::FromBytes;
+use zerocopy::FromZeros;
+use zerocopy::IntoBytes;
 
 use crate::frame::ClassicCanTimestamp;
 pub use crate::frame::Frame;

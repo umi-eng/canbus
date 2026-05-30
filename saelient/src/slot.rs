@@ -1,7 +1,10 @@
 //! Scaling, limit, offset, and transfer functions (J1939-73)
 
-use crate::signal::{Param8, Param16, Signal};
-use num::{FromPrimitive, cast::AsPrimitive};
+use crate::signal::Param8;
+use crate::signal::Param16;
+use crate::signal::Signal;
+use num::FromPrimitive;
+use num::cast::AsPrimitive;
 
 pub trait Slot<T: Signal>: Sized {
     /// Unit of measurement.

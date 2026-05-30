@@ -1,7 +1,8 @@
-use saelient::{
-    Pgn,
-    transport::{DataTransfer, RequestToSend, Response, Transfer},
-};
+use saelient::Pgn;
+use saelient::transport::DataTransfer;
+use saelient::transport::RequestToSend;
+use saelient::transport::Response;
+use saelient::transport::Transfer;
 
 fn main() {
     // Request to send received from the sender.

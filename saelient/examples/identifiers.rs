@@ -1,4 +1,5 @@
-use saelient::{Id, Pgn};
+use saelient::Id;
+use saelient::Pgn;
 
 pub fn main() {
     let id_builder = Id::builder()
