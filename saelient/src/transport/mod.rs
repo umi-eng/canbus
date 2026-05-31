@@ -158,6 +158,7 @@ mod tests {
     use crate::id::Pgn;
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn transmission() {
         let rts = message::RequestToSend::new(16, Some(2), Pgn::ProprietaryA);
         let mut transfer = Transfer::new(rts);
@@ -192,6 +193,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn finished_returns_none_before_complete() {
         let rts = RequestToSend::new(14, None, Pgn::Request);
         let transfer = Transfer::new(rts);
@@ -272,6 +274,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn out_of_order_packet_returns_sequence_error() {
         let rts = RequestToSend::new(14, None, Pgn::Request);
         let mut transfer = Transfer::new(rts);
@@ -284,6 +287,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn duplicate_packet_returns_sequence_error() {
         let rts = RequestToSend::new(14, None, Pgn::Request);
         let mut transfer = Transfer::new(rts);
@@ -295,6 +299,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn any_packet_after_abort_returns_previous_abort_error() {
         let rts = RequestToSend::new(14, None, Pgn::Request);
         let mut transfer = Transfer::new(rts);
@@ -328,6 +333,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn no_cts_when_no_limit() {
         // 3 packets, no CTS limit - only EndOfMsgAck at the end, nothing in between
         let rts = RequestToSend::new(21, None, Pgn::Request);

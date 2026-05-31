@@ -16,3 +16,7 @@ default = ["std"]
 std = ["managed/std", "alloc"]
 alloc = ["managed/alloc", "defmt?/alloc"]
 defmt-1 = ["defmt"]
+
+[[example]]
+name = "transport_protocol"
+required-features = ["alloc"]
