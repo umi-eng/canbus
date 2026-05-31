@@ -20,3 +20,7 @@ defmt-1 = ["defmt"]
 [[example]]
 name = "transport_protocol"
 required-features = ["alloc"]
+
+[[example]]
+name = "edcp_checksums"
+required-features = ["alloc"]
