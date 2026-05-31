@@ -10,6 +10,8 @@
 - Fix SLOT forward transfer function order of operations.
 - Module doc-comment titles.
 - Improve unit test coverage across all modules.
+- Update defmt to v1.1.
+- Make tests only run with required features.
 
 ## v0.2.0
 
