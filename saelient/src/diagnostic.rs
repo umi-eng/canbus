@@ -1,5 +1,22 @@
 //! Diagnostics (J1939-73)
 
+/// Compute the J1939-73 EDCP nibble checksum for a raw 8-byte frame.
+///
+/// Returns the 4-bit value that should be placed in bits \[3:0\] of byte 7.  The
+/// algorithm XORs the 15 nibbles formed by bytes 0–6 (both nibbles each) and
+/// the *upper* nibble of byte 7; a correctly protected frame has all 16
+/// nibbles XOR to zero.
+fn compute_edcp(raw: &[u8; 8]) -> u8 {
+    let mut acc: u8 = 0;
+    for &b in &raw[..7] {
+        acc ^= b & 0x0F;
+        acc ^= (b >> 4) & 0x0F;
+    }
+    // upper nibble of byte 7 only — lower nibble holds the checksum
+    acc ^= (raw[7] >> 4) & 0x0F;
+    acc & 0x0F
+}
+
 /// DM14 - Memory Access Request
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt-1", derive(defmt::Format))]
@@ -55,8 +72,46 @@ impl MemoryAccessRequest {
     }
 
     /// Security key or user level, depending on context.
+    ///
+    /// When EDCP protection is active the lower nibble of byte 7 holds the
+    /// checksum; callers that need the unmodified field should mask it with
+    /// `0xFFF0` or use [`verify_edcp`](Self::verify_edcp) before reading.
     pub fn key_or_user_level(&self) -> u16 {
         u16::from_le_bytes([self.raw[6], self.raw[7]])
+    }
+
+    /// Returns `true` if the EDCP protection flag (byte 1, bit 0) is set.
+    pub fn edcp_protected(&self) -> bool {
+        self.raw[1] & 0x01 != 0
+    }
+
+    /// Set the EDCP protection flag and embed the J1939-73 nibble checksum in
+    /// bits \[3:0\] of byte 7.
+    ///
+    /// The upper nibble of byte 7 (upper 4 bits of `key_or_user_level`) is
+    /// preserved; the lower nibble is overwritten with the computed checksum.
+    pub fn with_edcp(mut self) -> Self {
+        self.raw[1] |= 0x01; // set EDCP flag
+        self.raw[7] &= 0xF0; // clear checksum nibble before computing
+        self.raw[7] |= compute_edcp(&self.raw);
+        self
+    }
+
+    /// Verify the J1939-73 EDCP nibble checksum.
+    ///
+    /// Returns `true` when the EDCP flag is set *and* the XOR of all 16
+    /// nibbles is zero (intact frame).  Returns `false` when EDCP is not
+    /// active or the checksum does not match.
+    pub fn verify_edcp(&self) -> bool {
+        if !self.edcp_protected() {
+            return false;
+        }
+        let mut acc: u8 = 0;
+        for &b in &self.raw {
+            acc ^= b & 0x0F;
+            acc ^= (b >> 4) & 0x0F;
+        }
+        acc == 0
     }
 }
 
@@ -181,8 +236,47 @@ impl MemoryAccessResponse {
         ErrorIndicator::from(indicator)
     }
 
+    /// The seed value returned to the requester.
+    ///
+    /// When EDCP protection is active the lower nibble of byte 7 holds the
+    /// checksum; use [`verify_edcp`](Self::verify_edcp) to check integrity
+    /// before trusting the value.
     pub fn seed(&self) -> u16 {
         u16::from_le_bytes([self.raw[6], self.raw[7]])
+    }
+
+    /// Returns `true` if the EDCP protection flag (byte 1, bit 0) is set.
+    pub fn edcp_protected(&self) -> bool {
+        self.raw[1] & 0x01 != 0
+    }
+
+    /// Set the EDCP protection flag and embed the J1939-73 nibble checksum in
+    /// bits \[3:0\] of byte 7.
+    ///
+    /// The upper nibble of byte 7 (upper 4 bits of `seed`) is preserved; the
+    /// lower nibble is overwritten with the computed checksum.
+    pub fn with_edcp(mut self) -> Self {
+        self.raw[1] |= 0x01; // set EDCP flag
+        self.raw[7] &= 0xF0; // clear checksum nibble before computing
+        self.raw[7] |= compute_edcp(&self.raw);
+        self
+    }
+
+    /// Verify the J1939-73 EDCP nibble checksum.
+    ///
+    /// Returns `true` when the EDCP flag is set *and* the XOR of all 16
+    /// nibbles is zero (intact frame).  Returns `false` when EDCP is not
+    /// active or the checksum does not match.
+    pub fn verify_edcp(&self) -> bool {
+        if !self.edcp_protected() {
+            return false;
+        }
+        let mut acc: u8 = 0;
+        for &b in &self.raw {
+            acc ^= b & 0x0F;
+            acc ^= (b >> 4) & 0x0F;
+        }
+        acc == 0
     }
 }
 
@@ -421,8 +515,35 @@ pub struct BootLoadData {
 }
 
 impl BootLoadData {
+    /// The raw 8-byte data payload.
+    ///
+    /// When the frame carries an EDCP checksum the lower nibble of byte 7 is
+    /// the checksum value rather than application data.
     pub fn data(&self) -> [u8; 8] {
         self.raw
+    }
+
+    /// Embed the J1939-73 nibble checksum in bits \[3:0\] of byte 7.
+    ///
+    /// TP data frames do not carry a separate EDCP flag; the receiver is
+    /// expected to know from context (DM14/DM15 negotiation) whether EDCP is
+    /// active.  The upper nibble of byte 7 is preserved.
+    pub fn with_edcp(mut self) -> Self {
+        self.raw[7] &= 0xF0;
+        self.raw[7] |= compute_edcp(&self.raw);
+        self
+    }
+
+    /// Verify the J1939-73 nibble checksum.
+    ///
+    /// Returns `true` when the XOR of all 16 nibbles is zero (intact frame).
+    pub fn verify_edcp(&self) -> bool {
+        let mut acc: u8 = 0;
+        for &b in &self.raw {
+            acc ^= b & 0x0F;
+            acc ^= (b >> 4) & 0x0F;
+        }
+        acc == 0
     }
 }
 
@@ -712,5 +833,181 @@ mod tests {
         assert_eq!(Pointer::Direct(42), Pointer::Direct(42));
         assert_ne!(Pointer::Direct(42), Pointer::Spatial(42));
         assert_ne!(Pointer::Direct(1), Pointer::Direct(2));
+    }
+
+    #[test]
+    fn compute_edcp_zero_frame_gives_zero() {
+        // XOR of all zero nibbles is 0; checksum of bytes 0-6 + high nibble of
+        // byte 7 (all zero) should produce 0, and 0 stored in low nibble keeps
+        // the full 16-nibble XOR at 0.
+        assert_eq!(compute_edcp(&[0u8; 8]), 0);
+    }
+
+    #[test]
+    fn compute_edcp_verify_identity() {
+        // For any frame, placing compute_edcp() in the low nibble of byte 7
+        // must make all 16 nibbles XOR to zero.
+        let mut raw = [0x12u8, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0];
+        let cs = compute_edcp(&raw);
+        raw[7] = (raw[7] & 0xF0) | cs;
+        let mut acc: u8 = 0;
+        for &b in &raw {
+            acc ^= b & 0x0F;
+            acc ^= (b >> 4) & 0x0F;
+        }
+        assert_eq!(acc, 0);
+    }
+
+    #[test]
+    fn mar_edcp_not_set_by_default() {
+        let rq = MemoryAccessRequest::new(Command::Read, Pointer::Direct(0x100), 8, 0xAB00);
+        assert!(!rq.edcp_protected());
+        assert!(!rq.verify_edcp());
+    }
+
+    #[test]
+    fn mar_with_edcp_sets_flag_and_passes_verify() {
+        let rq =
+            MemoryAccessRequest::new(Command::Read, Pointer::Direct(0x100), 8, 0xAB00).with_edcp();
+        assert!(rq.edcp_protected());
+        assert!(rq.verify_edcp());
+    }
+
+    #[test]
+    fn mar_edcp_does_not_corrupt_other_fields() {
+        let rq = MemoryAccessRequest::new(Command::Write, Pointer::Spatial(0xDEAD), 100, 0xF0F0)
+            .with_edcp();
+        assert_eq!(rq.command(), Command::Write);
+        assert_eq!(rq.pointer(), Pointer::Spatial(0xDEAD));
+        assert_eq!(rq.length(), 100);
+        // upper nibble of key_or_user_level byte 7 is preserved
+        assert_eq!(rq.raw[7] & 0xF0, 0xF0);
+        assert!(rq.verify_edcp());
+    }
+
+    #[test]
+    fn mar_edcp_idempotent() {
+        // applying with_edcp twice should yield the same bytes
+        let rq = MemoryAccessRequest::new(Command::Erase, Pointer::Direct(0), 0, 0);
+        let once = rq.clone().with_edcp();
+        let twice = once.clone().with_edcp();
+        assert_eq!(once.raw, twice.raw);
+    }
+
+    #[test]
+    fn mar_edcp_detects_corruption() {
+        let mut rq =
+            MemoryAccessRequest::new(Command::Read, Pointer::Direct(0x42), 16, 0x1200).with_edcp();
+        assert!(rq.verify_edcp());
+        // flip a bit in byte 3
+        rq.raw[3] ^= 0x01;
+        assert!(!rq.verify_edcp());
+    }
+
+    #[test]
+    fn mar_edcp_roundtrip_via_bytes() {
+        let rq = MemoryAccessRequest::new(Command::BootLoad, Pointer::Direct(0xCAFE), 7, 0x5500)
+            .with_edcp();
+        let bytes: [u8; 8] = (&rq).into();
+        let rq2 = MemoryAccessRequest::try_from(bytes.as_ref()).unwrap();
+        assert!(rq2.verify_edcp());
+        assert_eq!(rq2.command(), Command::BootLoad);
+    }
+
+    #[test]
+    fn mar_response_edcp_not_set_by_default() {
+        let resp = MemoryAccessResponse::new(Status::Proceed, ErrorIndicator::None, 8, 0x1200);
+        assert!(!resp.edcp_protected());
+        assert!(!resp.verify_edcp());
+    }
+
+    #[test]
+    fn mar_response_with_edcp_sets_flag_and_passes_verify() {
+        let resp =
+            MemoryAccessResponse::new(Status::Proceed, ErrorIndicator::None, 8, 0x1200).with_edcp();
+        assert!(resp.edcp_protected());
+        assert!(resp.verify_edcp());
+    }
+
+    #[test]
+    fn mar_response_edcp_does_not_corrupt_other_fields() {
+        let resp = MemoryAccessResponse::new(
+            Status::OperationCompleted,
+            ErrorIndicator::Security,
+            512,
+            0xB0C0,
+        )
+        .with_edcp();
+        assert_eq!(resp.status(), Status::OperationCompleted);
+        assert_eq!(resp.error_indicator(), ErrorIndicator::Security);
+        assert_eq!(resp.length(), 512);
+        assert_eq!(resp.raw[7] & 0xF0, 0xB0); // seed=0xB0C0 LE -> byte7=0xB0
+        assert!(resp.verify_edcp());
+    }
+
+    #[test]
+    fn mar_response_edcp_detects_corruption() {
+        let mut resp =
+            MemoryAccessResponse::new(Status::Busy, ErrorIndicator::None, 4, 0x0000).with_edcp();
+        assert!(resp.verify_edcp());
+        resp.raw[0] ^= 0x10;
+        assert!(!resp.verify_edcp());
+    }
+
+    #[test]
+    fn mar_response_edcp_roundtrip_via_bytes() {
+        let resp = MemoryAccessResponse::new(
+            Status::OperationFailed,
+            ErrorIndicator::AddressingOutOfBounds,
+            1024,
+            0x4400,
+        )
+        .with_edcp();
+        let bytes: [u8; 8] = (&resp).into();
+        let resp2 = MemoryAccessResponse::try_from(bytes.as_ref()).unwrap();
+        assert!(resp2.verify_edcp());
+        assert_eq!(resp2.status(), Status::OperationFailed);
+    }
+
+    #[test]
+    fn boot_load_data_with_edcp_passes_verify() {
+        let raw: &[u8] = &[0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x20];
+        let bl = BootLoadData::try_from(raw).unwrap().with_edcp();
+        assert!(bl.verify_edcp());
+    }
+
+    #[test]
+    fn boot_load_data_edcp_idempotent() {
+        let raw: &[u8] = &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x80];
+        let bl = BootLoadData::try_from(raw).unwrap();
+        let once = bl.clone().with_edcp();
+        let twice = once.clone().with_edcp();
+        assert_eq!(once.data(), twice.data());
+    }
+
+    #[test]
+    fn boot_load_data_edcp_preserves_upper_nibble_of_byte7() {
+        let raw: &[u8] = &[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0];
+        let bl = BootLoadData::try_from(raw).unwrap().with_edcp();
+        assert_eq!(bl.data()[7] & 0xF0, 0xA0, "upper nibble must be unchanged");
+        assert!(bl.verify_edcp());
+    }
+
+    #[test]
+    fn boot_load_data_edcp_detects_corruption() {
+        let raw: &[u8] = &[0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x80];
+        let mut bl = BootLoadData::try_from(raw).unwrap().with_edcp();
+        assert!(bl.verify_edcp());
+        bl.raw[2] ^= 0x80;
+        assert!(!bl.verify_edcp());
+    }
+
+    #[test]
+    fn boot_load_data_without_edcp_fails_verify() {
+        // an unprotected all-zero frame happens to pass (all nibbles are 0, XOR
+        // is 0), but a typical non-zero frame without protection should fail.
+        let raw: &[u8] = &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let bl = BootLoadData::try_from(raw).unwrap();
+        assert!(!bl.verify_edcp());
     }
 }
