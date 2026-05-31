@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## v0.2.1
+
 - Add SAEec06 and SAEec09 SLOTs.
 - Add data page and extended data page to builder.
 - Implement `PartialEq` to mask of priority bits when comparing ids.
