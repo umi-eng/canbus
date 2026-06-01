@@ -88,9 +88,6 @@ fn main() {
     println!("  EDCP verified OK — proceeding with TP transfer");
     println!("");
 
-    // -----------------------------------------------------------------------
-    // Step 4 — Build EDCP-protected DM17 frames and send them via TP (DM16)
-    // -----------------------------------------------------------------------
     // The 16-byte payload to write into flash.
     let payload: [u8; 16] = [
         0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD,
