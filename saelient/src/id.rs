@@ -76,8 +76,8 @@ impl Id {
     pub fn pgn(&self) -> Pgn {
         let raw = self.0 >> 8;
         let raw = match self.pf() {
-            PduFormat::Pdu1(_) => raw & 0x1FF00,
-            PduFormat::Pdu2(_) => raw & 0x1FFFF,
+            PduFormat::Pdu1(_) => raw & 0x3FF00,
+            PduFormat::Pdu2(_) => raw & 0x3FFFF,
         };
         Pgn::from(raw)
     }
@@ -398,6 +398,35 @@ mod tests {
             .build()
             .unwrap();
         assert!(id.edp());
+    }
+
+    #[test]
+    fn pgn_includes_edp_bit_pdu1() {
+        // J1939-21: PGN is 18 bits – bit 17 is EDP.
+        // 0x02EF5000: EDP=1 (bit 25), DP=0, PF=0xEF (PDU1), DA=0x50, SA=0x00
+        let id = Id::new(0x02EF5000);
+        assert!(id.edp(), "EDP must be set");
+        assert!(!id.dp(), "DP must be clear");
+        // correct PGN: (1<<17) | (0xEF<<8) = 0x2EF00 = 192256
+        assert_eq!(
+            u32::from(id.pgn()),
+            0x2EF00,
+            "EDP bit must appear in the PGN"
+        );
+    }
+
+    #[test]
+    fn pgn_includes_edp_bit_pdu2() {
+        // 0x02FFAB00: EDP=1 (bit 25), DP=0, PF=0xFF (PDU2), GE=0xAB, SA=0x00
+        let id = Id::new(0x02FFAB00);
+        assert!(id.edp(), "EDP must be set");
+        assert!(!id.dp(), "DP must be clear");
+        // correct PGN: (1<<17) | (0xFF<<8) | 0xAB = 0x2FFAB = 196523
+        assert_eq!(
+            u32::from(id.pgn()),
+            0x2FFAB,
+            "EDP bit and GE must both appear in the PGN"
+        );
     }
 
     #[test]
