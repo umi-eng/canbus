@@ -407,6 +407,7 @@ impl TryFrom<u8> for AbortSenderRole {
         match value {
             x if x == Self::Sender as u8 => Ok(Self::Sender),
             x if x == Self::Receiver as u8 => Ok(Self::Receiver),
+            x if x == Self::Reserved as u8 => Ok(Self::Reserved),
             x if x == Self::NotSpecified as u8 => Ok(Self::NotSpecified),
             _ => Err(value),
         }
@@ -771,6 +772,7 @@ mod tests {
         let roles = [
             AbortSenderRole::Sender,
             AbortSenderRole::Receiver,
+            AbortSenderRole::Reserved,
             AbortSenderRole::NotSpecified,
         ];
         for role in roles {
@@ -782,11 +784,11 @@ mod tests {
     }
 
     #[test]
-    fn connection_abort_reserved_role_falls_back_to_not_specified() {
-        // role bits = 0b10 (Reserved) - `TryFrom` fails so falls back to NotSpecified
+    fn connection_abort_reserved_role_roundtrips_as_reserved() {
+        // role bits = 0b10 (Reserved) — must decode back to Reserved, not NotSpecified.
         let raw: &[u8] = &[255, 3, 0b11111110, 0xFF, 0xFF, 0x00, 0xEA, 0x00];
         let decoded = ConnectionAbort::try_from(raw).unwrap();
-        assert_eq!(decoded.sender_role(), AbortSenderRole::NotSpecified);
+        assert_eq!(decoded.sender_role(), AbortSenderRole::Reserved);
     }
 
     #[test]
@@ -883,6 +885,10 @@ mod tests {
         assert_eq!(
             AbortSenderRole::try_from(1u8).unwrap(),
             AbortSenderRole::Receiver
+        );
+        assert_eq!(
+            AbortSenderRole::try_from(2u8).unwrap(),
+            AbortSenderRole::Reserved
         );
         assert_eq!(
             AbortSenderRole::try_from(3u8).unwrap(),
