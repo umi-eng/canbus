@@ -136,6 +136,11 @@ impl ClearToSend {
     pub fn next_sequence(&self) -> u8 {
         self.next_sequence
     }
+
+    /// Transfer contents PGN.
+    pub fn pgn(&self) -> Pgn {
+        self.pgn
+    }
 }
 
 impl From<&ClearToSend> for [u8; 8] {
@@ -898,8 +903,52 @@ mod tests {
 
     #[test]
     fn abort_sender_role_try_from_invalid() {
-        // 0b10 = Reserved, has no TryFrom mapping
-        assert_eq!(AbortSenderRole::try_from(2u8), Err(2));
+        // Values 4 and above are not defined and must return Err.
+        assert_eq!(AbortSenderRole::try_from(4u8), Err(4));
+        assert_eq!(AbortSenderRole::try_from(0xFFu8), Err(0xFF));
+    }
+
+    #[test]
+    #[should_panic]
+    fn rts_max_packets_zero_panics() {
+        // J1939-21: max_packets=0x00 is "not defined; shall not be used."
+        // The constructor must reject it.
+        RequestToSend::new(9, Some(0), Pgn::Request);
+    }
+
+    #[test]
+    fn cts_pgn_accessor_and_roundtrip() {
+        // J1939-21 table 5: CTS carries the PGN of the multi-packet message.
+        // The PGN must be readable and must survive a serialise/deserialise roundtrip.
+        let pgn = Pgn::Request;
+        let cts = ClearToSend::new(Some(5), 3, pgn);
+        assert_eq!(cts.pgn(), pgn, "pgn() getter must return the stored PGN");
+
+        let bytes: [u8; 8] = (&cts).into();
+        let decoded = ClearToSend::try_from(bytes.as_ref()).unwrap();
+        assert_eq!(
+            decoded.pgn(),
+            pgn,
+            "PGN must survive serialisation roundtrip"
+        );
+    }
+
+    #[test]
+    fn abort_sender_role_reserved_roundtrip() {
+        // AbortSenderRole::Reserved (0b10) is a defined J1939-21 value and must
+        // survive a serialise/deserialise roundtrip.
+        let abort = ConnectionAbort::new(
+            AbortReason::Timeout,
+            AbortSenderRole::Reserved,
+            Pgn::Request,
+        );
+        let bytes: [u8; 8] = (&abort).into();
+        let decoded = ConnectionAbort::try_from(bytes.as_ref()).unwrap();
+        assert_eq!(
+            decoded.sender_role(),
+            AbortSenderRole::Reserved,
+            "Reserved role must survive roundtrip, not be silently coerced to NotSpecified"
+        );
     }
 
     #[test]
