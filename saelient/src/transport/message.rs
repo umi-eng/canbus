@@ -28,7 +28,7 @@ impl RequestToSend {
 
         if let Some(max) = max_packets_per_response {
             assert!(
-                max >= 1 && max < 255,
+                (1..255).contains(&max),
                 "max_packets_per_response must be 1–254; use `None` for no limit (0x00 and 0xFF are not valid)"
             );
         }
