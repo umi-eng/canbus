@@ -1,3 +1,3 @@
 [workspace]
 resolver = "2"
-members = ["cansocket", "gsusb","korlan", "saelient"]
+members = ["cansocket", "gsusb", "korlan", "saelient", "pcan"]
