@@ -155,7 +155,7 @@ pub struct BusStatus {
     pub rx_err: u8,
 }
 
-/// Mode flags for [`Device::open_channel`].
+/// Mode flags for [`PCanFd::open_channel`].
 #[derive(Debug, Clone, Default)]
 pub struct ChannelOptions {
     /// Listen-only mode
