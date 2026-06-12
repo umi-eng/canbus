@@ -1,4 +1,4 @@
-/// A classical CAN 2.0 frame (max 8 data bytes).
+/// A classic CAN 2.0 frame (max 8 data bytes).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Frame {
     /// CAN identifier (standard 11-bit or extended 29-bit).

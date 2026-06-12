@@ -449,7 +449,7 @@ impl PCanFd {
         self.send_cmd(&cmd_opcode(OpCode::ResetMode)).await
     }
 
-    /// Transmit a classical CAN frame.
+    /// Transmit a classic CAN frame.
     pub async fn send(&self, frame: Frame) -> Result<(), Error> {
         let (raw_id, ext) = match frame.id {
             embedded_can::Id::Standard(s) => (s.as_raw() as u32, false),
@@ -846,7 +846,7 @@ fn decode_rx_msg(buf: &[u8]) -> Option<CanMessage> {
             esi: flags & PUCAN_MSG_ERROR_STATE_IND != 0,
         }))
     } else {
-        // Classical CAN frame
+        // Classic CAN frame
         let rtr = flags & PUCAN_MSG_RTR != 0;
         let data_len = if rtr { 0 } else { dlc as usize };
         if buf.len() < RX_OFF_DATA + data_len {
@@ -980,7 +980,7 @@ mod tests {
         assert_eq!(oc, OpCode::ResetMode as u16);
     }
 
-    /// Build a raw pucan_rx_msg packet for a classical CAN frame.
+    /// Build a raw pucan_rx_msg packet for a classic CAN frame.
     fn make_rx_pkt(ext: bool, rtr: bool, can_id: u32, dlc: u8, data: &[u8]) -> Vec<u8> {
         let data_len = if rtr { 0 } else { data.len() };
         let size = (RX_HDR + data_len + 3) & !3;
