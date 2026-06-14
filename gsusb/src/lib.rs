@@ -103,8 +103,15 @@ impl Device {
             .ok_or(Error::NotRecognized)?;
 
         let device = info.open().await?;
-        let _ = device.detach_kernel_driver(0); // try detach from kernel (only applicable to Linux)
-        device.reset().await?;
+        // Detaching the kernel driver and resetting the device are only safe on
+        // Linux. On macOS a USB reset triggers re-enumeration: the device gets a
+        // new address and the existing handle becomes stale, causing all
+        // subsequent interface operations to fail with "interface not found".
+        #[cfg(target_os = "linux")]
+        {
+            let _ = device.detach_kernel_driver(0);
+            device.reset().await?;
+        }
 
         let iface: Interface = device.claim_interface(0).await?;
         let mut data_tx = iface.endpoint::<Bulk, Out>(0x02)?;
