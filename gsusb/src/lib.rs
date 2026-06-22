@@ -113,6 +113,12 @@ impl Device {
             device.reset().await?;
         }
 
+        // On macOS, interface services do not appear until set configuration is
+        // called. Without this claim_interface fails with "interface not
+        // found".
+        #[cfg(target_os = "macos")]
+        device.set_configuration(1).await?;
+
         let iface: Interface = device.claim_interface(0).await?;
         let mut data_tx = iface.endpoint::<Bulk, Out>(0x02)?;
         let mut data_rx = iface.endpoint::<Bulk, In>(0x81)?;
