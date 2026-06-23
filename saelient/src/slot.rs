@@ -22,7 +22,12 @@ pub trait Slot<T: Signal>: Sized {
 
     /// Try converting from an f32.
     fn from_f32(value: f32) -> Option<Self> {
-        let value = ((value - Self::OFFSET) / Self::SCALE).round();
+        let value = (value - Self::OFFSET) / Self::SCALE;
+        let value = if value >= 0.0 {
+            value + 0.5
+        } else {
+            value - 0.5
+        };
         let value = T::Base::from_f32(value)?;
         let parameter = T::from_raw(value)?;
         Some(Self::new(parameter))

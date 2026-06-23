@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Implement slot f32 rounding manually for no_std platforms.
+
 ## v0.2.3
 
 - Fix SAEpc03 and SAEpc04 slots scale and offset incorrect.
