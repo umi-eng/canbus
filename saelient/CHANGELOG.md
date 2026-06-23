@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+# v0.2.2
+
 - Fix EDP bit being masked off when getting the PGN from an id.
 - Assert TP.RTS packets per response is at least one.
 - Also deserialize `AbortSenderRole::Reserved` rather than returning `Err`.
