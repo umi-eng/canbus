@@ -7,6 +7,7 @@
 - Also deserialize `AbortSenderRole::Reserved` rather than returning `Err`.
 - Make PGN accessible for `RequestToSend`.
 - SLOTs for SAEpc03 and SAEpc04.
+- Rename defmt feature.
 
 ## v0.2.1
 
