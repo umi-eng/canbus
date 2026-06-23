@@ -12,7 +12,7 @@ pub use message::EndOfMessageAck;
 pub use message::RequestToSend;
 
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "defmt-1", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     StorageTooSmall,
     Sequence,
@@ -20,7 +20,7 @@ pub enum Error {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "defmt-1", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Response {
     Cts(ClearToSend),
     End(EndOfMessageAck),

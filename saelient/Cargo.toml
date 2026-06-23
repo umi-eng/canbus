@@ -15,7 +15,7 @@ num = { version = "0.4.3", default-features = false }
 default = ["std"]
 std = ["managed/std", "alloc"]
 alloc = ["managed/alloc", "defmt?/alloc"]
-defmt = ["defmt"]
+defmt = ["dep:defmt"]
 
 [[example]]
 name = "transport_protocol"

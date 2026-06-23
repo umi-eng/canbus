@@ -2,7 +2,7 @@
 ///
 /// See J1939™-21 section 5.3 for more details.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt-1", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum PduFormat {
     /// PS = DA (destination address)
     Pdu1(u8),
@@ -37,7 +37,7 @@ impl From<Pgn> for PduFormat {
 /// Equality comparisons exclude priority bits, making it easy to match frames
 /// by content regardless of priority.
 #[derive(Debug, Clone, Copy, Eq)]
-#[cfg_attr(feature = "defmt-1", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Id(u32);
 
 impl Id {
@@ -142,7 +142,7 @@ impl From<Id> for embedded_can::Id {
 }
 
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "defmt-1", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct IdBuilder {
     priority: Option<u8>,
     pgn: Option<Pgn>,
@@ -235,7 +235,7 @@ impl Default for IdBuilder {
 
 /// Parameter group number (PGN)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt-1", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Pgn {
     /// RQST2 - Request 2
     Request2,

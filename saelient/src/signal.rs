@@ -49,7 +49,7 @@ macro_rules! signal_impl {
     ) => {
         /// Parameter signal.
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-        #[cfg_attr(feature = "defmt-1", derive(defmt::Format))]
+        #[cfg_attr(feature = "defmt", derive(defmt::Format))]
         pub struct $type($base);
 
         impl Signal for $type {
@@ -212,7 +212,7 @@ signal_impl!(
 
 /// Discrete parameter
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt-1", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Discrete {
     Disabled = 0b00,
     Enabled = 0b01,
@@ -242,7 +242,7 @@ impl From<Discrete> for u8 {
 
 /// Control command
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt-1", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Command {
     Disable = 0b00,
     Enable = 0b01,
