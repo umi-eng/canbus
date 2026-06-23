@@ -85,6 +85,8 @@ slot_impl!(
     "V",
     "Voltage - 0.001 V per bit"
 );
+slot_impl!(SaePC03, Param8, 0.0, 1.0, "%", "Percent - 0.4% per bit");
+slot_impl!(SaePC04, Param8, -1.0, 1.0, "%", "Percent - 0.8% per bit");
 
 #[cfg(test)]
 mod tests {
@@ -152,5 +154,41 @@ mod tests {
         let slot = SaeEV06::from_f32(64.225006).unwrap();
         assert_eq!(slot.parameter().value().unwrap(), 64225);
         assert_eq!(slot.as_f32(), Some(64.225006));
+    }
+
+    #[test]
+    fn slot_sae_pc03() {
+        let slot = SaePC03::from_f32(0.0).unwrap();
+        assert_eq!(slot.parameter().value().unwrap(), 0);
+        assert_eq!(slot.as_f32(), Some(0.0));
+
+        let slot = SaePC03::from_f32(100.0).unwrap();
+        assert_eq!(slot.parameter().value().unwrap(), 100);
+        assert_eq!(slot.as_f32(), Some(100.0));
+
+        let slot = SaePC03::from_f32(250.0).unwrap();
+        assert_eq!(slot.parameter().value().unwrap(), 250);
+        assert_eq!(slot.as_f32(), Some(250.0));
+
+        // 0xFC and 0xFD are the only raw u8 values with no Param8 mapping
+        assert!(SaePC03::from_f32(252.0).is_none());
+    }
+
+    #[test]
+    fn slot_sae_pc04() {
+        let slot = SaePC04::from_f32(-1.0).unwrap();
+        assert_eq!(slot.parameter().value().unwrap(), 0);
+        assert_eq!(slot.as_f32(), Some(-1.0));
+
+        let slot = SaePC04::from_f32(0.0).unwrap();
+        assert_eq!(slot.parameter().value().unwrap(), 1);
+        assert_eq!(slot.as_f32(), Some(0.0));
+
+        let slot = SaePC04::from_f32(249.0).unwrap();
+        assert_eq!(slot.parameter().value().unwrap(), 250);
+        assert_eq!(slot.as_f32(), Some(249.0));
+
+        // raw 252 (0xFC) has no Param8 mapping to physical value 251.0
+        assert!(SaePC04::from_f32(251.0).is_none());
     }
 }
