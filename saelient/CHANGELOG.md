@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## v0.2.3
+
 - Fix SAEpc03 and SAEpc04 slots scale and offset incorrect.
 
 ## v0.2.2
