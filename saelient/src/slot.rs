@@ -22,7 +22,7 @@ pub trait Slot<T: Signal>: Sized {
 
     /// Try converting from an f32.
     fn from_f32(value: f32) -> Option<Self> {
-        let value = (value - Self::OFFSET) / Self::SCALE;
+        let value = ((value - Self::OFFSET) / Self::SCALE).round();
         let value = T::Base::from_f32(value)?;
         let parameter = T::from_raw(value)?;
         Some(Self::new(parameter))
@@ -166,8 +166,7 @@ mod tests {
         assert_eq!(slot.parameter().value().unwrap(), 75);
         assert_eq!(slot.as_f32(), Some(0.30));
 
-        // "rounded" to the nearest input that yields raw 250 (1.0 / 0.004f32 truncates to 249)
-        let slot = SaePC03::from_f32(1.001).unwrap();
+        let slot = SaePC03::from_f32(1.0).unwrap();
         assert_eq!(slot.parameter().value().unwrap(), 250);
         assert_eq!(slot.as_f32(), Some(1.0));
 
@@ -181,17 +180,15 @@ mod tests {
         assert_eq!(slot.parameter().value().unwrap(), 0);
         assert_eq!(slot.as_f32(), Some(-1.0));
 
-        // "rounded" to the nearest input that yields raw 125 (1.0 / 0.008f32 truncates to 124)
-        let slot = SaePC04::from_f32(0.001).unwrap();
+        let slot = SaePC04::from_f32(0.0).unwrap();
         assert_eq!(slot.parameter().value().unwrap(), 125);
         assert_eq!(slot.as_f32(), Some(0.0));
 
         let slot = SaePC04::from_f32(0.20).unwrap();
         assert_eq!(slot.parameter().value().unwrap(), 150);
-        assert_eq!(slot.as_f32(), Some(0.20000005));
+        assert_eq!(slot.as_f32(), Some(0.20000005)); // 150 * 0.008f32 - 1.0; scale not exact in f32
 
-        // "rounded" to the nearest input that yields raw 250 (2.0 / 0.008f32 truncates to 249)
-        let slot = SaePC04::from_f32(1.001).unwrap();
+        let slot = SaePC04::from_f32(1.0).unwrap();
         assert_eq!(slot.parameter().value().unwrap(), 250);
         assert_eq!(slot.as_f32(), Some(1.0));
 
