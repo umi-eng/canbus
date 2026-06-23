@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Fix SAEpc03 and SAEpc04 slots scale and offset incorrect.
+
 # v0.2.2
 
 - Fix EDP bit being masked off when getting the PGN from an id.

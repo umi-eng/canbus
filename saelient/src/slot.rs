@@ -85,8 +85,8 @@ slot_impl!(
     "V",
     "Voltage - 0.001 V per bit"
 );
-slot_impl!(SaePC03, Param8, 0.0, 1.0, "%", "Percent - 0.4% per bit");
-slot_impl!(SaePC04, Param8, -1.0, 1.0, "%", "Percent - 0.8% per bit");
+slot_impl!(SaePC03, Param8, 0.0, 0.004, "%", "Percent - 0.4% per bit");
+slot_impl!(SaePC04, Param8, -1.0, 0.008, "%", "Percent - 0.8% per bit");
 
 #[cfg(test)]
 mod tests {
@@ -162,16 +162,17 @@ mod tests {
         assert_eq!(slot.parameter().value().unwrap(), 0);
         assert_eq!(slot.as_f32(), Some(0.0));
 
-        let slot = SaePC03::from_f32(100.0).unwrap();
-        assert_eq!(slot.parameter().value().unwrap(), 100);
-        assert_eq!(slot.as_f32(), Some(100.0));
+        let slot = SaePC03::from_f32(0.30).unwrap();
+        assert_eq!(slot.parameter().value().unwrap(), 75);
+        assert_eq!(slot.as_f32(), Some(0.30));
 
-        let slot = SaePC03::from_f32(250.0).unwrap();
+        // "rounded" to the nearest input that yields raw 250 (1.0 / 0.004f32 truncates to 249)
+        let slot = SaePC03::from_f32(1.001).unwrap();
         assert_eq!(slot.parameter().value().unwrap(), 250);
-        assert_eq!(slot.as_f32(), Some(250.0));
+        assert_eq!(slot.as_f32(), Some(1.0));
 
-        // 0xFC and 0xFD are the only raw u8 values with no Param8 mapping
-        assert!(SaePC03::from_f32(252.0).is_none());
+        // Negative values produce a negative raw index, which is out of range
+        assert!(SaePC03::from_f32(-0.004).is_none());
     }
 
     #[test]
@@ -180,15 +181,21 @@ mod tests {
         assert_eq!(slot.parameter().value().unwrap(), 0);
         assert_eq!(slot.as_f32(), Some(-1.0));
 
-        let slot = SaePC04::from_f32(0.0).unwrap();
-        assert_eq!(slot.parameter().value().unwrap(), 1);
+        // "rounded" to the nearest input that yields raw 125 (1.0 / 0.008f32 truncates to 124)
+        let slot = SaePC04::from_f32(0.001).unwrap();
+        assert_eq!(slot.parameter().value().unwrap(), 125);
         assert_eq!(slot.as_f32(), Some(0.0));
 
-        let slot = SaePC04::from_f32(249.0).unwrap();
-        assert_eq!(slot.parameter().value().unwrap(), 250);
-        assert_eq!(slot.as_f32(), Some(249.0));
+        let slot = SaePC04::from_f32(0.20).unwrap();
+        assert_eq!(slot.parameter().value().unwrap(), 150);
+        assert_eq!(slot.as_f32(), Some(0.20000005));
 
-        // raw 252 (0xFC) has no Param8 mapping to physical value 251.0
-        assert!(SaePC04::from_f32(251.0).is_none());
+        // "rounded" to the nearest input that yields raw 250 (2.0 / 0.008f32 truncates to 249)
+        let slot = SaePC04::from_f32(1.001).unwrap();
+        assert_eq!(slot.parameter().value().unwrap(), 250);
+        assert_eq!(slot.as_f32(), Some(1.0));
+
+        // Below offset produces a negative raw index, which is out of range
+        assert!(SaePC04::from_f32(-1.008).is_none());
     }
 }
