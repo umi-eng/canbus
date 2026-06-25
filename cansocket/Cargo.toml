@@ -16,4 +16,4 @@ libc = { version = "0.2", features = ["extra_traits"] }
 
 [dev-dependencies]
 smol = "2.0"
-tokio = { version = "1.50", features = ["full"] }
+tokio = { version = "1.52", features = ["full"] }
