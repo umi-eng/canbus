@@ -4,7 +4,6 @@ mod frame;
 mod protocol;
 
 use crate::frame::ClassicCanTimestamp;
-pub use crate::frame::Frame;
 use futures::lock::Mutex;
 use nusb::DeviceInfo;
 use nusb::Endpoint;
@@ -24,6 +23,9 @@ use std::time::Duration;
 use zerocopy::FromBytes;
 use zerocopy::FromZeros;
 use zerocopy::IntoBytes;
+
+pub use crate::frame::Frame;
+pub use crate::protocol::CanState;
 
 struct DeviceId {
     #[allow(unused)]

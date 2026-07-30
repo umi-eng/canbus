@@ -120,6 +120,7 @@ impl DeviceState {
     }
 }
 
+/// Interface state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CanState {
     /// RX/TX error count < 96
