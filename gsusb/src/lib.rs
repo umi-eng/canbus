@@ -3,6 +3,8 @@
 mod frame;
 mod protocol;
 
+use crate::frame::ClassicCanTimestamp;
+pub use crate::frame::Frame;
 use futures::lock::Mutex;
 use nusb::DeviceInfo;
 use nusb::Endpoint;
@@ -22,9 +24,6 @@ use std::time::Duration;
 use zerocopy::FromBytes;
 use zerocopy::FromZeros;
 use zerocopy::IntoBytes;
-
-use crate::frame::ClassicCanTimestamp;
-pub use crate::frame::Frame;
 
 struct DeviceId {
     #[allow(unused)]
@@ -66,6 +65,7 @@ pub enum Error {
     FeatureNotSupported,
 }
 
+/// Protocol error type.
 #[derive(Debug, thiserror::Error)]
 pub enum ProtocolErrorKind {
     #[error("Response size invalid")]
@@ -87,6 +87,7 @@ pub async fn list_devices() -> Result<impl Iterator<Item = DeviceInfo>, Error> {
     Ok(iter)
 }
 
+/// GS USB device interface.
 pub struct Device {
     iface: Interface,
     data_tx: Mutex<Endpoint<Bulk, Out>>,

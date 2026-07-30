@@ -9,6 +9,7 @@ use zerocopy::FromZeros;
 use zerocopy::Immutable;
 use zerocopy::IntoBytes;
 
+/// CAN bus frame.
 #[derive(Clone, Copy, FromBytes, IntoBytes, Immutable)]
 #[repr(C)]
 pub struct Frame {
