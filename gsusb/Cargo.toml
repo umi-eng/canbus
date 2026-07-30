@@ -1,8 +1,12 @@
 [package]
 name = "gsusb"
+description = "Host driver for the Geschwister Schneider USB/CAN protocol"
 version = "0.1.0"
 edition = "2024"
 readme = "README.md"
+license = "MPL-2.0"
+repository = "https://github.com/umi-eng/canbus"
+categories = ["network-programming"]
 
 [dependencies]
 embedded-can = "0.4"
