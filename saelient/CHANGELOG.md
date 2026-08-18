@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Expose signal ranges as constants.
+
 ## v0.2.4
 
 - Implement slot f32 rounding manually for no_std platforms.

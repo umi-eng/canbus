@@ -5,6 +5,18 @@ pub trait Signal: Sized {
     /// Underlying base type.
     type Base: num::FromPrimitive + num::cast::AsPrimitive<u32>;
 
+    /// Range of valid parameter values.
+    const VALID_RANGE: core::ops::RangeInclusive<Self::Base>;
+
+    /// Range of parameter-specific indicator values.
+    const INDICATOR_RANGE: core::ops::RangeInclusive<Self::Base>;
+
+    /// Range of error values.
+    const ERROR_RANGE: core::ops::RangeInclusive<Self::Base>;
+
+    /// Range of values indicating that the parameter is not present.
+    const NOT_PRESENT_RANGE: core::ops::RangeInclusive<Self::Base>;
+
     /// Create from raw value.
     ///
     /// Returns `None` if the value provided is greater than the maximum
@@ -54,6 +66,13 @@ macro_rules! signal_impl {
 
         impl Signal for $type {
             type Base = $base;
+
+            const VALID_RANGE: core::ops::RangeInclusive<Self::Base> = $valid_min..=$valid_max;
+            const INDICATOR_RANGE: core::ops::RangeInclusive<Self::Base> =
+                $indicator_min..=$indicator_max;
+            const ERROR_RANGE: core::ops::RangeInclusive<Self::Base> = $error_min..=$error_max;
+            const NOT_PRESENT_RANGE: core::ops::RangeInclusive<Self::Base> =
+                $not_present_min..=$not_present_max;
 
             fn from_raw(value: $base) -> Option<Self> {
                 match value {
@@ -301,6 +320,16 @@ mod tests {
         assert_eq!(Param4::from_raw(0x0).unwrap().value(), Some(0x0));
         assert_eq!(Param4::from_raw(0xA).unwrap().value(), Some(0xA));
         assert_eq!(Param4::from_raw(0xF).unwrap().value(), None);
+    }
+
+    #[test]
+    fn ranges() {
+        assert!(<Param4 as Signal>::VALID_RANGE.contains(&0x0));
+        assert!(Param4::VALID_RANGE.contains(&0x0A));
+        assert!(!Param4::VALID_RANGE.contains(&0x0B));
+        assert!(Param12::INDICATOR_RANGE.contains(&0xFB0));
+        assert!(Param16::ERROR_RANGE.contains(&0xFEFF));
+        assert!(Param32::NOT_PRESENT_RANGE.contains(&0xFFFFFFFF));
     }
 
     #[test]
