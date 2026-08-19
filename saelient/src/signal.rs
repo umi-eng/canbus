@@ -1,5 +1,12 @@
 //! Signals (J1939-71)
 
+/// Errors returned when constructing a signal from a raw value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+pub enum SignalError {
+    #[error("raw value is outside the signal's defined ranges")]
+    OutOfRange,
+}
+
 /// Signal type.
 pub trait Signal: Sized {
     /// Underlying base type.
@@ -19,9 +26,9 @@ pub trait Signal: Sized {
 
     /// Create from raw value.
     ///
-    /// Returns `None` if the value provided is greater than the maximum
-    /// allowable for the signal.
-    fn from_raw(value: Self::Base) -> Option<Self>;
+    /// Returns an error if the value provided is outside the ranges defined
+    /// for the signal.
+    fn from_raw(value: Self::Base) -> Result<Self, SignalError>;
 
     /// Get the raw value.
     fn to_raw(&self) -> Self::Base;
@@ -74,13 +81,13 @@ macro_rules! signal_impl {
             const NOT_PRESENT_RANGE: core::ops::RangeInclusive<Self::Base> =
                 $not_present_min..=$not_present_max;
 
-            fn from_raw(value: $base) -> Option<Self> {
+            fn from_raw(value: $base) -> Result<Self, SignalError> {
                 match value {
                     $valid_min..=$valid_max
                     | $indicator_min..=$indicator_max
                     | $error_min..=$error_max
-                    | $not_present_min..=$not_present_max => Some(Self(value)),
-                    _ => None,
+                    | $not_present_min..=$not_present_max => Ok(Self(value)),
+                    _ => Err(SignalError::OutOfRange),
                 }
             }
 
@@ -307,12 +314,12 @@ mod tests {
 
     #[test]
     fn outside_signal() {
-        assert!(Param4::from_raw(0xF + 1).is_none());
-        assert!(Param10::from_raw(0x3FF + 1).is_none());
-        assert!(Param12::from_raw(0xFFF + 1).is_none());
-        assert!(Param20::from_raw(0xFFFFF + 1).is_none());
-        assert!(Param24::from_raw(0xFFFFFF + 1).is_none());
-        assert!(Param28::from_raw(0xFFFFFFF + 1).is_none());
+        assert!(Param4::from_raw(0xF + 1).is_err());
+        assert!(Param10::from_raw(0x3FF + 1).is_err());
+        assert!(Param12::from_raw(0xFFF + 1).is_err());
+        assert!(Param20::from_raw(0xFFFFF + 1).is_err());
+        assert!(Param24::from_raw(0xFFFFFF + 1).is_err());
+        assert!(Param28::from_raw(0xFFFFFFF + 1).is_err());
     }
 
     #[test]

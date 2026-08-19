@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - Expose signal ranges as constants.
+- Add bespoke error types for SLOTs and signals.
 
 ## v0.2.4
 
