@@ -302,8 +302,17 @@ impl Device {
         Ok(())
     }
 
-    /// Receive a frame.
+    /// Receive the next frame.
     pub async fn recv(&self) -> Result<Frame, Error> {
+        loop {
+            let frame = self.recv_raw().await?;
+            if !frame.is_echo() {
+                return Ok(frame);
+            }
+        }
+    }
+
+    async fn recv_raw(&self) -> Result<Frame, Error> {
         let size = std::mem::size_of::<Frame>().next_multiple_of(64);
         let rx = Buffer::new(size);
         let completion = {

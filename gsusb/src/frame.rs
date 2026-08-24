@@ -23,6 +23,8 @@ pub struct Frame {
 }
 
 impl Frame {
+    pub(crate) const ECHO_ID_INVALID: u32 = u32::MAX;
+
     const EFF_FLAG: u32 = 0x80000000;
     const RTR_FLAG: u32 = 0x40000000;
     const ERR_FLAG: u32 = 0x20000000;
@@ -36,6 +38,10 @@ impl Frame {
     /// have the channel 0.
     fn channel(&self) -> u8 {
         self.channel
+    }
+
+    pub(crate) fn is_echo(&self) -> bool {
+        self.echo_id != Self::ECHO_ID_INVALID
     }
 }
 
