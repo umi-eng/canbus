@@ -143,7 +143,7 @@ impl Device {
         })
     }
 
-    /// Configure an channel.
+    /// Configure a channel.
     pub async fn start(&self, channel: u8, options: ChannelOptions) -> Result<(), Error> {
         let mut features = Features::new();
         if options.listen_only {
@@ -285,7 +285,7 @@ impl Device {
         let mut frame = frame.to_owned();
         frame.channel = channel;
 
-        // only fd frames are over 64 byte and use two transfers.
+        // only fd frames are over 64 bytes and use two transfers.
         let bytes = if frame.flags.fd() {
             frame.as_bytes()
         } else {
